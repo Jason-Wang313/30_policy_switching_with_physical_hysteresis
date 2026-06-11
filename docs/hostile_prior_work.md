@@ -1,0 +1,104 @@
+# Hostile Prior Work
+
+These papers are the strongest reasons the thesis could be unoriginal or overclaimed.
+
+- Hysteresis Switching Control of the Ćuk Converter Operating in Discontinuous Conduction Modes (2017): score 26.09 | robot policy switching hysteresis
+- Using low‐cost microcontrollers to implement variable hysteresis‐width comparators for switching power converters (2018): score 26.09 | robot policy switching hysteresis
+- Calculation of switching frequency in current hysteresis controlled switched reluctance drives (2004): score 26.08 | robot policy switching hysteresis
+- High performance constant switching frequency hysteresis-based direct torque control technique (2014): score 26.08 | robot policy switching hysteresis
+- Photovoltaic parallel resonant dc-link soft switching inverter using hysteresis current control (2010): score 26.08 | robot policy switching hysteresis
+- Fixed switching frequency sliding mode control using an hysteresis band controller (2014): score 26.07 | robot policy switching hysteresis
+- Mode Switching Control for Personal Mobility Robot (2011): score 26.07 | robot policy switching hysteresis
+- Priority-Based Switching Model Predictive Control for Sequential Manipulation of Space Robot (2025): score 26.07 | chatter-free switching robot control
+- A topological comparison of PWM and hysteresis controls in switching audio amplifiers (2008): score 26.06 | robot policy switching hysteresis
+- Adapted hysteresis current control with switching frequency limitation for switched reluctance machines (2009): score 26.06 | robot policy switching hysteresis
+- Control of switching frequency for modular multilevel converters by a variable hysteresis band modulation (2016): score 26.06 | robot policy switching hysteresis
+- Hierarchical autonomous switching control of a multi-modes omnidirectional mobile robot (2021): score 26.06 | robot policy switching hysteresis
+- Multi - Mobile Robot Leader -Follower Formation Distributed Control Under Switching Topology (2020): score 26.06 | robot policy switching hysteresis
+- Switching Motion Control of the Climbing Robot for Aircraft Skin Inspection (2019): score 26.06 | robot policy switching hysteresis
+- A Hysteresis Current Controlled Grid connected Full Bridge Inverter With Zero Current Switching (2018): score 26.05 | robot policy switching hysteresis
+- A novel hysteresis current control switching method for torque ripple minimization in multi-phase motors (2014): score 26.05 | robot policy switching hysteresis
+- Analysis of Switching and Conduction Losses in Hysteresis Current-Controlled Inverters. (1993): score 26.05 | robot policy switching hysteresis
+- Switching Frequency Limited Hysteresis Based Voltage Mode Control of Single-Phase Voltage Source Inverters (2023): score 26.05 | robot policy switching hysteresis
+- Control for Time‐Varying Delay Systems by Integrating Semi‐Discretization and Hysteresis‐Based Switching (2018): score 26.04 | robot policy switching hysteresis
+- Control-Oriented Reinforcement Active Modeling Scheme for Hysteresis Compensation of Flexible Endoscopic Robot (2024): score 26.04 | robot policy switching hysteresis
+- Controlling predator–prey discrete dynamics utilizing a threshold policy with hysteresis (2011): score 26.04 | robot policy switching hysteresis
+- Current controlled non-hysteresis magnetic switching in the absence of magnetic field (2022): score 26.04 | robot policy switching hysteresis
+- Development of Modified Hysteresis Current Controller Switching Scheme for Multifunctional Grid-tied Photovoltaic Inverters (2021): score 26.04 | robot policy switching hysteresis
+- Implementation of Constant Switching Frequency Hysteresis based Current Control of Solar PV Inverter (2023): score 26.04 | robot policy switching hysteresis
+- Modeling control of a snake robot with switching constraints (2008): score 26.04 | robot policy switching hysteresis
+- A novel hysteresis current controller for active power filter with constant switching frequency (2002): score 26.03 | robot policy switching hysteresis
+- Adaptive Switching Iterative Learning Control of Robot Manipulator (2016): score 26.03 | robot policy switching hysteresis
+- Channel switching control policy for wireless mesh networks (2012): score 26.03 | robot policy switching hysteresis
+- Controller-switching based gait transition for a quadruped robot (2016): score 26.03 | robot policy switching hysteresis
+- Embedding Koopman Optimal Control in Robot Policy Learning (2022): score 26.03 | robot policy switching hysteresis
+- FREE-FLYING MANIPULATION ROBOT COMPUTER CONTROL (1980): score 26.03 | chatter-free switching robot control
+- Fuzzy Switching for Multiple Model Adaptive Control in Manipulator Robot (2017): score 26.03 | robot policy switching hysteresis
+- Hysteresis Current Control for a High Efficiency Totem Pole PFC in Zero Voltage Switching (2021): score 26.03 | robot policy switching hysteresis
+- Obstacle avoidance of snake robot by switching control constraint (2012): score 26.03 | robot policy switching hysteresis
+- Proposal Of A Hysteresis Controller With Constant Switching Frequency (2005): score 26.03 | robot policy switching hysteresis
+- Setting the hysteresis constant to zero in adaptive switching control (2011): score 26.03 | robot policy switching hysteresis
+- A constant hysteresis-band current controller with fixed switching frequency (2002): score 26.02 | robot policy switching hysteresis
+- A hysteresis current control method for active power filter with lower switching losses (2011): score 26.02 | robot policy switching hysteresis
+- A new digital hysteresis current control for switching power converters (2016): score 26.02 | robot policy switching hysteresis
+- A novel direct power control strategy of double hysteresis and multiple switching tables for rectifiers (2011): score 26.02 | robot policy switching hysteresis
+- Discontinuous force-based robot adaptive switching update rate impedance control (2021): score 26.02 | robot policy switching hysteresis
+- Hysteresis control with constant switching frequency of single-phase PWM rectifier (2015): score 26.02 | robot policy switching hysteresis
+- Hysteresis-based switching control of stochastic linear systems (2003): score 26.02 | robot policy switching hysteresis
+- Multiobjective Optimization of Powertrain Mode Switching With Hysteresis Control for Electric Heavy-Duty Vehicles (2025): score 26.02 | robot policy switching hysteresis
+- Passive Bilateral Control of a Teleoperation System Considering Hysteresis Nonlinearity of Slave Robot (2008): score 26.02 | robot policy switching hysteresis
+- Stable landing method for biped robot by using switching control (2012): score 26.02 | robot policy switching hysteresis
+- Switched affine systems with hysteresis-based switching control: application to power converters (2022): score 26.02 | robot policy switching hysteresis
+- Switching control applied to interconnected Boost converters: A comparison with hysteresis current control (2022): score 26.02 | robot policy switching hysteresis
+- Switching frequency characterization of hysteresis control in a pump back test configuration (2017): score 26.02 | robot policy switching hysteresis
+- Switching operation mode resonance ratio control for flexible robot system (2013): score 26.02 | robot policy switching hysteresis
+- Time-switching patrolling controller for holonomic and nonholonomic multi-robot systems (2024): score 26.02 | robot policy switching hysteresis
+- A Fully Integrated Recursive Switched-Capacitor DC-DC Converter with Hybrid Hysteresis-CFM Control (2024): score 26.01 | hybrid control robot hysteresis contact
+- A new stair‐band hysteresis current control with constant switching frequency for UPFC application (2024): score 26.01 | robot policy switching hysteresis
+- A switching control scheme for constrained robot tasks (2002): score 26.01 | robot policy switching hysteresis
+- A switching policy for predictive control systems (1967): score 26.01 | robot policy switching hysteresis
+- Adaptive visual servoing control of robot with unknown hysteresis constraint (2016): score 26.01 | robot policy switching hysteresis
+- Ambient light intensity based topology switching control for multi-robot system (2013): score 26.01 | robot policy switching hysteresis
+- Carrier-based hysteresis controlled constant switching frequency strategy for three-level inverter based DSTATCOM (2018): score 26.01 | robot policy switching hysteresis
+- Design of switching frequency limiter for hysteresis current controlled PWM VSI (2013): score 26.01 | robot policy switching hysteresis
+- Eliminating short switching cycles when using hysteresis control of resistance spot welding systems (2017): score 26.01 | robot policy switching hysteresis
+- Four Level Current Hysteresis Switching Based Control of STATCOM for Reactive Power Compensation (2020): score 26.01 | robot policy switching hysteresis
+- Free-Flying Manipulation Robot Computer Control (1979): score 26.01 | chatter-free switching robot control
+- Full-digital predictive hysteresis current control for switching losses minimisation in PMSM drives (2002): score 26.01 | robot policy switching hysteresis
+- Hysteresis based voltage mode control of three phase two level inverters with constant switching frequency (2022): score 26.01 | robot policy switching hysteresis
+- Hysteresis control of nonlinear single-acting actuators as applied to brake/throttle switching (1999): score 26.01 | robot policy switching hysteresis
+- Improved Hysteresis Current Control Regulator for High-efficiency Switching (2012): score 26.01 | robot policy switching hysteresis
+- Improved hysteresis current control of multilevel inverters with constant switching frequency (2010): score 26.01 | robot policy switching hysteresis
+- On opportunities of dimensioning a (virtual) flux based hysteresis controller for minimal switching frequency (2014): score 26.01 | robot policy switching hysteresis
+- Parallel-Form Switch-Linear Hybrid Envelope Tracking Power Supply with Adaptive Hysteresis Current Control (2024): score 26.01 | hybrid control robot hysteresis contact
+- Realistic threshold policy with hysteresis to control predator–prey continuous dynamics (2009): score 26.01 | robot policy switching hysteresis
+- Robot visual servo control based on switching approach (2008): score 26.01 | robot policy switching hysteresis
+- Switched control algorithms to robot-human bilateral interaction without contact (2013): score 26.01 | hybrid control robot hysteresis contact
+- Switching Adaptive Control with Applications on Robot Manipulators (2022): score 26.01 | robot policy switching hysteresis
+- THE CONTRIBUTION OF ELECTRICAL CONDUCTIVITY, DIELECTRIC PERMITTIVITY AND DOMAIN SWITCHING IN FERROELECTRIC HYSTERESIS LOOPS (2011): score 26.0 | robot policy switching hysteresis
+- Hysteresis, Switching, and Negative Differential Resistance in Molecular Junctions: A Polaron Model (2004): score 26.0 | robot policy switching hysteresis
+- Generating 3-D multi-scroll chaotic attractors: A hysteresis series switching method (2004): score 26.0 | robot policy switching hysteresis
+- Sensorless Robot Collision Detection and Hybrid Force/Motion Control (2006): score 26.0 | hybrid control robot hysteresis contact
+- Negative Capacitance Field Effect Transistor With Hysteresis-Free Sub-60-mV/Decade Switching (2016): score 26.0 | robot policy switching hysteresis
+- 20205 Motion control of mobile robot with switching the direction (2015): score 26.0 | robot policy switching hysteresis
+- 2A2-B22 Robot hand tele-operation system switching position control and force control with contact information (2009): score 26.0 | chatter-free switching robot control
+- 3919 Sliding Mode Control with Quadratic Switching Functions for Robot Manipulators (2005): score 26.0 | robot policy switching hysteresis
+- A New Hysteresis Current Control Method for Active Power Filter with Lower Switching Losses (2014): score 26.0 | robot policy switching hysteresis
+- A Novel Unity Power Factor Hysteresis Current Control for SPMSM Using Switching Table (2014): score 26.0 | robot policy switching hysteresis
+- A reduced switching frequency range Unipolar Hysteresis Current Controller for single phase grid connected system (2022): score 26.0 | robot policy switching hysteresis
+- Adaptive Hysteresis Current Control For Improved EMI Performance in Fast Switching Motor Drives (2023): score 26.0 | robot policy switching hysteresis
+- Adaptive hysteresis band control for constant switching frequency in DTC induction machine drives (2010): score 26.0 | robot policy switching hysteresis
+- Adaptive hysteresis band control for converter with low output ripple and constant switching frequency (2013): score 26.0 | robot policy switching hysteresis
+- Adaptive output feedback control for robot manipulators using lyapunov-based switching (2009): score 26.0 | robot policy switching hysteresis
+- Adaptive-fuzzy hysteresis controlled three phase shunt active filter for constant switching frequency (2016): score 26.0 | robot policy switching hysteresis
+- Almost output tracking control for switched positive systems: A hysteresis switching strategy (2023): score 26.0 | robot policy switching hysteresis
+- An Adaptive Evolutionary Switching Control for Robot Manipulators (2005): score 26.0 | robot policy switching hysteresis
+- Application of Dual-Mode Switching Threshold Controller to Autonomous Carrier Robot (2010): score 26.0 | robot policy switching hysteresis
+- Compound control with hysteresis-band switching for LOS stabilization system (2010): score 26.0 | robot policy switching hysteresis
+- Constant Switching Frequency Hysteresis Controllers Technique for Grid Integrated Voltage Source Inverter (2024): score 26.0 | robot policy switching hysteresis
+- Control algorithms for some functioning modes of free-flying space manipulation robot (2018): score 26.0 | chatter-free switching robot control
+- Control of a Free-Flying Space Manipulation Robot with a Payload (2023): score 26.0 | chatter-free switching robot control
+- Control of a Free-Flying Space Manipulation Robot with a Payload (2023): score 26.0 | chatter-free switching robot control
+- Deterministic Policy Search Method for Real Robot Control (2017): score 26.0 | robot policy switching hysteresis
+- Development of a Robust Random Switching Hysteresis PWM Inverter for Linear Positioning Control (2002): score 26.0 | robot policy switching hysteresis
+- Fast-slow Switching Control Method for Flexible Ankle Roll of Robot (2022): score 26.0 | robot policy switching hysteresis
