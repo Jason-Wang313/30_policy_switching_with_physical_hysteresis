@@ -14,6 +14,13 @@
 \begin{document}
 \maketitle
 
+\paragraph{Submission-hardening version: v2.}
+This revision adds a supervisor tuning stress. The hysteresis+dwell supervisor
+reduces mean switch cost from 171.0 to 29.5 over 50 seeds, but mean tracking
+error rises from 0.090 to 0.186; an over-hysteresis setting reduces switch cost
+to 11.4 but raises mean error to 0.439. The supported claim is therefore a
+switch-cost tradeoff, not free performance improvement or formal optimality.
+
 \begin{abstract}
 Switching between robot skills is usually treated as a computation-level decision: choose the best policy now, then execute it immediately.
 This paper argues that for contact-rich robots, switching itself has a physical price.
@@ -21,6 +28,7 @@ When a robot abandons one skill and re-seats another in contact, the transition 
 We call this path-dependent penalty \emph{physical hysteresis}.
 The central mechanism is a hysteresis-aware supervisor that delays or suppresses switches unless the expected gain exceeds the expected physical switch cost.
 Using a toy contact simulation, we show that an immediate-switch baseline chatters heavily while the hysteresis-aware supervisor cuts switch count and accumulated switch cost by an order of magnitude.
+A v2 tuning stress makes the boundary explicit: the same supervisor increases tracking error, and over-hysteresis suppresses switches by lagging badly.
 The result is modest but mechanistically important: the novelty is not a bigger model or a new benchmark, but a different accounting of what switching means in physical contact.
 \end{abstract}
 
@@ -78,6 +86,25 @@ The numerical values are from the script in \texttt{scripts/run\_switch\_hystere
     \label{fig:sim}
 \end{figure}
 
+\paragraph{V2 supervisor tuning stress.}
+The v1 figure could be misread as saying hysteresis is simply better. To attack
+that claim, we sweep immediate switching, dwell-only gating, deadband-only
+gating, the proposed hysteresis+dwell supervisor, and an intentionally
+over-hysteretic supervisor across 50 seeds. Table~\ref{tab:stress} shows the
+tradeoff. Hysteresis+dwell cuts mean switch cost from 171.0 to 29.5, but mean
+tracking error rises from 0.090 to 0.186. Over-hysteresis cuts switch cost to
+11.4 but raises mean error to 0.439. The point is not that a fixed hysteresis
+gate dominates; it is that physical switching cost belongs in the objective and
+must be tuned against task error.
+
+\begin{table}[t]
+\centering
+\caption{V2 supervisor tuning stress. Switch suppression has a tracking-error
+price; over-hysteresis is a failure mode, not a win.}
+\label{tab:stress}
+\input{results/supervisor_stress_table.tex}
+\end{table}
+
 \section{Discussion}
 The strongest objection is that this is just dwell time or chatter suppression under a new name.
 We do not think so, but the boundary is real.
@@ -87,6 +114,8 @@ Instead, the contribution is the shift in central mechanism: the transition itse
 The main limitation is obvious.
 We have not yet validated the formulation on a real robot.
 The current evidence supports the mechanistic thesis and the supervisor design, but not a broad benchmark claim.
+The v2 stress also shows that switch suppression can harm tracking, so the
+method needs a calibrated objective that trades switch work against task error.
 
 \section{Conclusion}
 Policy switching in physical contact should not be modeled as free.

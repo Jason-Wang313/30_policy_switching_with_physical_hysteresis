@@ -1,0 +1,19 @@
+﻿{
+    "status":  "complete",
+    "paper_dir":  "C:\\Users\\wangz\\robotics_60_paper_batch\\30_policy_switching_with_physical_hysteresis",
+    "downloads_pdf":  "C:/Users/wangz/Downloads/30.pdf",
+    "steps":  [
+                  {
+                      "name":  "pdflatex1",
+                      "exit_code":  0,
+                      "log":  "C:\\Users\\wangz\\robotics_60_paper_batch\\30_policy_switching_with_physical_hysteresis\\build_pdflatex1.log"
+                  },
+                  {
+                      "name":  "pdflatex2",
+                      "exit_code":  0,
+                      "log":  "C:\\Users\\wangz\\robotics_60_paper_batch\\30_policy_switching_with_physical_hysteresis\\build_pdflatex2.log"
+                  }
+              ],
+    "copied":  true,
+    "removed_local_pdf":  true
+}

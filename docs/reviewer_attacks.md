@@ -5,8 +5,10 @@
 3. Physical hysteresis cost is not measured on hardware.
 4. The paper may not outperform a tuned threshold baseline.
 5. The novelty might collapse into generic hybrid control.
+6. Hysteresis may simply trade better switching metrics for worse tracking.
 
 ## Responses
 - Emphasize the stateful, path-dependent switch cost rather than the gate itself.
 - Be explicit that the evidence is mechanistic and toy-level if hardware is absent.
 - Compare against an immediate-switch baseline and a fixed dwell-time baseline.
+- V2 concedes the tracking tradeoff: the paper should claim switch-cost accounting, not free performance improvement.
