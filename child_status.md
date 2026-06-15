@@ -1,35 +1,32 @@
 # Child Status: Paper 30
 
-Stage: complete; v2 submission hardening ready to commit and push
+Stage: complete; v3 final full-scale hardening ready to commit and push
 
 Current facts:
 - Literature sweep completed with `docs/related_work_matrix.csv` containing 4678 Crossref-derived rows.
-- Main toy simulator regenerated `figures/switch_hysteresis_sim.png`.
-- Original headline result remains: immediate switching performs 224 switches and accumulates 179.2 switch-cost units; hysteresis-aware gating performs 35 switches and accumulates 28.0 switch-cost units.
-- V2 supervisor stress generated `results/supervisor_stress.csv` and `results/supervisor_stress_table.tex`.
-- V2 stress result: across 50 seeds, hysteresis+dwell cuts mean switch cost from 171.0 to 29.5 but raises mean tracking error from 0.090 to 0.186; over-hysteresis reaches 11.4 switch cost but 0.439 mean error.
-- Paper source is `main.tex` with visible v2 note, supervisor stress table, and narrowed discussion.
-- LaTeX build completed with `scripts/build_pdf.ps1`.
-- Final PDF copied to `C:/Users/wangz/Downloads/30.pdf`.
-- Transient `main.pdf` removed so the final PDF exists only at the required Downloads path.
-- Checked Desktop paths contain no `30.pdf`.
+- Original toy simulator and v2 stress artifacts are preserved for provenance.
+- A paper-specific full-scale execution plan was written before substantive v3 edits at `docs/full_scale_execution_plan.md`.
+- Full-scale suite is `scripts/run_full_scale_hysteresis_suite.py`.
+- Full-scale outputs are in `results/full_scale/`.
+- The v3 suite covers 7 families, 10 regimes, 12 methods, 40 seeds, 240 steps per seed, and 8,064,000 represented step decisions.
+- Main v3 result: immediate greedy switching has mean switch work 108.0 and mean error 0.015; calibrated cost supervision has mean switch work 16.2 and mean error 0.067; oracle cost-aware supervision has best mean utility 0.034.
+- Negative controls remain explicit: sticky policy fails on task error, over-hysteresis traps reduce switch work but raise mean error to 0.581, and the smooth free-switch control checks that cheap switches should not be suppressed.
+- Paper source is `main.tex` with visible `v3 final full-scale` marker and 25 rendered pages.
+- Canonical final PDF is `C:/Users/wangz/Downloads/30.pdf` with SHA256 `6B8D9A0050D0FCF81907884652B2D305ED6F62021C83FFF49BD0CE919459DD00`.
+- Final PDF size is 550057 bytes.
+- Transient `main.pdf` was removed by `scripts/build_pdf.ps1`.
 - Public GitHub repo exists: `https://github.com/Jason-Wang313/30_policy_switching_with_physical_hysteresis`.
-- `docs/final_audit.md` exists and reports build status, v2 stress evidence, Downloads-only artifact status, Desktop absence, and local PDF absence.
 
 Commands run:
-- `python scripts\run_switch_hysteresis_sim.py`
+- `python scripts\run_full_scale_hysteresis_suite.py`
+- `pdflatex -interaction=nonstopmode -halt-on-error main.tex` twice for local page-count QA
 - `powershell -ExecutionPolicy Bypass -File scripts\build_pdf.ps1`
-- Safe probes for build status, Downloads PDF, Desktop absence, local PDF absence, LaTeX log status, and generated stress outputs.
+- Safe probes for build status, Downloads PDF, local PDF absence, LaTeX log status, PDF text markers, page count, file size, and SHA256 hash.
 
 Historical failures:
 - Original attempts failed on optional `mutool`, LaTeX style path issues, and natbib-sensitive bibliography entries.
-- V1 was manually recovered before this hardening pass.
-
-Recovery / hardening steps:
-- Added v2 supervisor stress and narrowed the claim to calibrated switch-cost accounting.
-- Added standard hardening docs: attack log, version log, hostile reviewer response, rigor checklist, reproducibility checklist, and readiness decision.
-- Added `scripts/build_pdf.ps1` and `.gitignore` rule for `main.pdf`.
-- Rebuilt the canonical PDF and removed the tracked local PDF.
+- V1 was manually recovered before prior hardening.
+- V2 was useful but short and toy-scale; v3 replaces it with a broader full-scale synthetic manuscript.
 
 Next:
-- Commit and push the v2 hardening update.
+- Commit and push the v3 hardening update.

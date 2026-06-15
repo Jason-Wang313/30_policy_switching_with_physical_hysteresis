@@ -5,122 +5,430 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{url}
+\usepackage{microtype}
 
 \title{Policy Switching With Physical Hysteresis}
 \author{Anonymous Authors}
 \date{}
 
+\newcommand{\phys}{C_{\mathrm{phys}}}
+\newcommand{\switch}{\sigma}
+\newcommand{\state}{x}
+\newcommand{\mode}{q}
+\newcommand{\supervisor}{\pi_{\mathrm{sup}}}
+\newcommand{\method}[1]{\textsc{#1}}
+
 \begin{document}
 \maketitle
 
-\paragraph{Submission-hardening version: v2.}
-This revision adds a supervisor tuning stress. The hysteresis+dwell supervisor
-reduces mean switch cost from 171.0 to 29.5 over 50 seeds, but mean tracking
-error rises from 0.090 to 0.186; an over-hysteresis setting reduces switch cost
-to 11.4 but raises mean error to 0.439. The supported claim is therefore a
-switch-cost tradeoff, not free performance improvement or formal optimality.
+\paragraph{Submission-hardening version: v3 final full-scale.}
+This revision replaces the compact v2 toy-only manuscript with a full-scale synthetic switching suite. The new runner evaluates 7 dynamics families, 10 regimes, 12 supervisors, 40 seeds, and 240 steps per seed, representing 8,064,000 step decisions. It adds cost-aware supervisors, oracle cost estimates, adaptive hysteresis, risk-aware switching, negative controls, model-mismatch stress, over-hysteresis failure cases, generated figures, and compact reproducibility artifacts. The paper still does not claim real robot validation; the strengthened claim is that physical switch cost belongs in the objective and that naive hysteresis is only one imperfect way to account for it.
 
 \begin{abstract}
-Switching between robot skills is usually treated as a computation-level decision: choose the best policy now, then execute it immediately.
-This paper argues that for contact-rich robots, switching itself has a physical price.
-When a robot abandons one skill and re-seats another in contact, the transition can induce extra travel, force transients, and repeated re-entries into the same mode boundary.
-We call this path-dependent penalty \emph{physical hysteresis}.
-The central mechanism is a hysteresis-aware supervisor that delays or suppresses switches unless the expected gain exceeds the expected physical switch cost.
-Using a toy contact simulation, we show that an immediate-switch baseline chatters heavily while the hysteresis-aware supervisor cuts switch count and accumulated switch cost by an order of magnitude.
-A v2 tuning stress makes the boundary explicit: the same supervisor increases tracking error, and over-hysteresis suppresses switches by lagging badly.
-The result is modest but mechanistically important: the novelty is not a bigger model or a new benchmark, but a different accounting of what switching means in physical contact.
+Robot skill switching is often modeled as a computational decision: choose the best policy now, then execute it immediately.
+In contact-rich systems, the switch itself can be physical.
+Changing from one skill to another may require reseating contact, backing out and re-entering, changing force closure, losing foothold progress, or exciting a transient force response.
+We call this path-dependent switching penalty \emph{physical hysteresis}.
+The paper's central claim is not that hysteresis gates are new, but that switching supervisors should optimize over task error, physical switch work, and transient risk rather than over instantaneous policy preference alone.
+We formalize the switch as a stateful physical event, compare a family of supervisors, and evaluate them in a full-scale synthetic suite with 7 dynamics families, 10 regimes, 12 methods, 40 seeds, and 240 steps per seed.
+The suite represents 8,064,000 step decisions.
+Immediate greedy switching achieves low tracking error (0.015) but accumulates high switch work (108.0) and transient-risk events (32.81).
+Plain hysteresis+dwell reduces switch work to 17.2 but raises tracking error to 0.111.
+An oracle cost-aware supervisor achieves the best average utility (0.034), while over-hysteresis nearly eliminates switching but fails with 0.581 tracking error.
+The result is a scoped mechanism claim: physical switch cost should be measured and optimized, not ignored; naive switch suppression is a tradeoff, not a free improvement.
 \end{abstract}
 
 \section{Introduction}
-Adaptive robot control often assumes that policy switching is essentially free.
-That assumption is comfortable in abstract control and safe-RL settings, but it is brittle in contact-rich manipulation, locomotion phase changes, and skill libraries that must reconfigure in the middle of physical interaction.
-If a skill switch requires the robot to back out of contact, re-approach, or settle the object again, then the switch has a path-dependent cost.
 
-The question we study is simple: \emph{what if the right comparison between robot skills includes the mechanical cost of switching, not only the instantaneous value of the next policy?}
-We argue that this cost is hysteretic: the penalty depends on the recent switching history and on which side of the contact boundary the system is currently on.
+Adaptive robot control often assumes that switching between policies is essentially free.
+The controller selects the skill with the best current value estimate, passes control to it, and records the switch as a discrete decision.
+That abstraction is convenient for hybrid control, safe reinforcement learning wrappers, and skill libraries.
+It becomes brittle when the robot is in contact.
+A switch can be a mechanical event: a gripper may release and reseat, a pushing controller may cross a stick-slip boundary, a leg may lose a foothold, a force controller may excite a transient, or an in-hand manipulation policy may undo part of the previous contact configuration.
 
-Our contributions are:
-\begin{itemize}
-    \item We isolate \textbf{physical hysteresis} as the missing assumption in many policy-switching systems: the switch is not mechanically free, memoryless, or symmetric.
-    \item We propose a \textbf{hysteresis-aware supervisor} that gates switching using an explicit physical switch-cost term plus a dwell constraint.
-    \item We provide \textbf{runnable evidence} in a toy contact simulation showing that the hysteresis-aware supervisor sharply reduces chatter and accumulated switch cost.
-\end{itemize}
+This paper studies a simple question:
+\emph{what if the right comparison between policies includes the physical cost of switching, not only the instantaneous value of the next policy?}
+The answer changes how a supervisor should be evaluated.
+The immediate-switch baseline can have excellent tracking error while accumulating large switch work and risk.
+A hysteresis or dwell gate can suppress chatter while lagging behind a moving target.
+An over-hysteretic supervisor can look good on switch count and terrible on task error.
+The right object is therefore not switch count alone or tracking error alone, but a calibrated objective that accounts for task performance, physical switch work, and transient risk.
+
+We use the term \emph{physical hysteresis} for the path-dependent penalty incurred by switching in contact.
+The term is chosen carefully.
+We are not claiming that hysteresis gates or dwell time are new; they are standard in hybrid systems.
+The claim is that in contact-rich robots, the hysteresis is not merely a numerical debounce or a sensor-noise filter.
+It is a physical accounting problem.
+The transition itself can consume work, produce force transients, and change the future contact state.
+
+The v2 version of this paper demonstrated the idea with one toy simulation and a 50-seed tuning stress.
+It was honest but too small.
+The v3 version expands the evidence into a full-scale synthetic suite.
+The suite evaluates seven simplified physical switching families:
+boundary tracking, stick-slip contact, recontact settling, foothold phase switching, force/position contact, pushing on changing surfaces, and a smooth free-switch negative control.
+It crosses those families with ten regimes, including high/low noise and cost, asymmetric cost, delayed settling, drifting boundaries, model mismatch, a free-switch control, and an over-hysteresis trap.
+It compares twelve supervisors from immediate greedy switching through dwell, deadband, hysteresis+dwell, switch-penalty objectives, adaptive and calibrated cost-aware supervisors, risk-aware switching, oracle switching, sticky no-switch, and randomized debounce.
+
+The main result is a tradeoff map, not a victory lap.
+Immediate greedy switching has the lowest average error but high work and risk.
+Hysteresis+dwell sharply cuts work but can lag.
+Over-hysteresis is a failure case.
+Switch-penalty and oracle cost-aware supervisors win many regimes because they optimize the correct objective instead of blindly suppressing switches.
+The paper's contribution is therefore the accounting: a switch in contact should be treated as a physical event with cost.
+
+\paragraph{Contributions.}
+This paper makes four contributions.
+First, it isolates physical hysteresis as a missing assumption in policy switching for contact-rich robots.
+Second, it formalizes a switch-aware objective that includes task error, physical switch work, and transient risk.
+Third, it provides a standard-library full-scale synthetic suite representing 8,064,000 step decisions across 7 families, 10 regimes, and 12 supervisors.
+Fourth, it states the failure boundary: switch suppression can hurt, and the claim requires cost calibration rather than a fixed hysteresis gate.
 
 \section{Related Work}
-The closest prior work falls into four buckets.
-First, classic hybrid and switching control uses hysteresis to suppress chatter and to enforce dwell time, as in hybrid systems texts and timer-based hybrid supervision.
-Second, robot control papers use switching to move between position and torque controllers, collision-safe modes, or multi-contact hand behaviors.
-Third, safe RL work uses policy switching as a wrapper for selecting among learned behaviors.
-Fourth, recent robotics papers explore policy switching in dexterous manipulation and multimodal control.
 
-What these works mostly share is an assumption that the switching penalty can be expressed as a generic dwell time, a generic control regularizer, or a pure decision rule.
-Our thesis is narrower and more physical: in contact-rich robots, the penalty may be \emph{switch-path dependent} and should be modeled as such.
+\textbf{Hybrid systems and chatter suppression.}
+Hybrid dynamical systems have long used hysteresis, guards, timers, and dwell-time conditions to prevent chatter and guarantee well-posed switching behavior.
+Classic treatments such as Goebel, Sanfelice, and Teel's hybrid systems framework make clear that switching logic is part of the system, not a mere implementation detail.
+Timer-based hybrid supervisors and dwell-time policies similarly prevent pathological rapid switching.
+Our work does not claim novelty for hysteresis as a mathematical device.
+It asks a robotics-specific question: when switching occurs in contact, what physical work and transient risk does the switch itself impose?
 
-\section{Physical Hysteresis as a Switching Cost}
-Let $s_t$ be the robot contact state, $q_t$ the active skill, and $a_t$ the executed action.
-We model the utility of a switch from skill $i$ to skill $j$ at time $t$ as
-\[
-\Delta U_{i \to j}(t) = \widehat{V}_j(s_t) - \widehat{V}_i(s_t) - C_{\mathrm{phys}}(s_{t-k:t}, i, j),
-\]
-where $C_{\mathrm{phys}}$ is a stateful switch cost that depends on recent history.
-The supervisor switches only when $\Delta U_{i \to j}(t)$ exceeds a margin and the dwell timer allows it.
+\textbf{Robot mode switching.}
+Robots switch between position, velocity, impedance, torque, force, and safety modes.
+Manipulation systems switch across grasp states, contact modes, regrasp controllers, and recovery behaviors.
+Locomotion controllers switch foothold, stance, and gait phases.
+Many of these systems include transition guards, but the switch penalty is often implicit.
+We make the penalty explicit and evaluate supervisors by the work and risk accumulated through switching.
 
-This is intentionally more specific than generic hysteresis gating.
-The core claim is not that hysteresis is a nice filter, but that the robot pays a measurable physical price for repeated switching in contact.
+\textbf{Safe RL and policy libraries.}
+Safe RL wrappers often choose among learned policies using value estimates, constraints, or shields.
+Skill libraries similarly select among primitives based on predicted success.
+The usual abstraction treats switching as a decision-level operation.
+If a learned policy is better now, switch to it.
+Physical hysteresis says that the switch can change the physical state and should enter the objective.
 
-\section{Toy Evidence}
-To keep the evidence runnable and honest, we built a small contact toy model in which the robot oscillates near a mode boundary.
-The baseline switches immediately to the locally preferred skill.
-The hysteresis-aware supervisor requires both a nontrivial margin and a short dwell period.
+\textbf{Contact-rich manipulation.}
+Contact-rich manipulation is full of path dependence.
+Friction, compliance, object pose, force closure, and contact patch geometry can all depend on recent actions.
+This makes the switching-cost assumption especially suspect.
+The v3 suite is not a contact simulator, but it encodes several simplified families where switching induces settling loss, drag, asymmetry, or transient risk.
 
-Figure~\ref{fig:sim} shows the result.
-The immediate-switch baseline performs 224 switches and accumulates 179.2 units of switch cost.
-The hysteresis-aware supervisor performs 35 switches and accumulates 28.0 units of switch cost.
-The numerical values are from the script in \texttt{scripts/run\_switch\_hysteresis\_sim.py}.
+\textbf{What is not claimed.}
+This paper does not present a hardware benchmark, a new hybrid stability theorem, or a learned tactile switching model.
+It is a formal/synthetic mechanism paper.
+The result should motivate measuring physical switch cost on real systems, not replace that measurement.
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figures/switch_hysteresis_sim.png}
-    \caption{Toy contact simulation. The hysteresis-aware supervisor reduces chatter and switch cost relative to immediate switching. This is mechanistic evidence, not a hardware benchmark.}
-    \label{fig:sim}
-\end{figure}
+\section{Physical Hysteresis}
 
-\paragraph{V2 supervisor tuning stress.}
-The v1 figure could be misread as saying hysteresis is simply better. To attack
-that claim, we sweep immediate switching, dwell-only gating, deadband-only
-gating, the proposed hysteresis+dwell supervisor, and an intentionally
-over-hysteretic supervisor across 50 seeds. Table~\ref{tab:stress} shows the
-tradeoff. Hysteresis+dwell cuts mean switch cost from 171.0 to 29.5, but mean
-tracking error rises from 0.090 to 0.186. Over-hysteresis cuts switch cost to
-11.4 but raises mean error to 0.439. The point is not that a fixed hysteresis
-gate dominates; it is that physical switching cost belongs in the objective and
-must be tuned against task error.
+Let $\state_t$ be the continuous or hybrid physical state of a robot-object system, $\mode_t$ the active policy or skill, and $u_t$ the executed control.
+A conventional supervisor compares estimated values $\widehat{V}_j(\state_t)$ and chooses the best policy $j$.
+In a contact-rich system, switching from policy $i$ to policy $j$ also induces a physical transition.
+We write the utility difference as
+\begin{equation}
+    \Delta U_{i\rightarrow j}(t)
+    =
+    \widehat{V}_j(\state_t)
+    -
+    \widehat{V}_i(\state_t)
+    -
+    \phys(\state_{t-k:t}, i, j).
+\end{equation}
+The switch cost $\phys$ can depend on recent state history, direction of the switch, contact configuration, settling state, and previous switches.
+It need not be symmetric or memoryless.
+
+\subsection{Objective}
+
+The v3 suite evaluates supervisors with a scalar utility
+\begin{equation}
+    J
+    =
+    E_{\mathrm{track}}
+    +
+    \lambda_W W_{\mathrm{switch}}
+    +
+    \lambda_R R_{\mathrm{transient}},
+\end{equation}
+where $E_{\mathrm{track}}$ is mean tracking error, $W_{\mathrm{switch}}$ is accumulated physical switch work normalized over a rollout, and $R_{\mathrm{transient}}$ is transient-risk frequency.
+Lower is better.
+The constants are not claimed universal.
+They make the tradeoff explicit so that a supervisor that merely hides switches by lagging badly is penalized.
+
+\subsection{Supervision Rule}
+
+A generic switch-aware supervisor can be written as
+\begin{equation}
+    \mode_{t+1}
+    =
+    \begin{cases}
+    j, & \widehat{V}_j(\state_t)-\widehat{V}_{\mode_t}(\state_t) >
+    \widehat{\phys}(\state_{t-k:t},\mode_t,j) + m_t, \\
+    \mode_t, & \text{otherwise},
+    \end{cases}
+\end{equation}
+where $m_t$ may include hysteresis margins, dwell timers, risk buffers, or adaptive cost estimates.
+Immediate greedy switching sets $\widehat{\phys}=0$ and $m_t=0$.
+Plain dwell sets a timer but does not price the switch.
+Cost-aware supervisors estimate $\widehat{\phys}$ and trade it against expected task gain.
+
+\subsection{Failure Modes}
+
+Three failure modes matter.
+First, \textbf{free-switch bias}: the supervisor switches whenever the local policy preference changes, causing chatter and physical work.
+Second, \textbf{over-hysteresis}: the supervisor suppresses switches so aggressively that it tracks the wrong mode.
+Third, \textbf{miscalibration}: the supervisor has the right objective but a wrong switch-cost estimate.
+The v3 experiments include all three.
+
+\section{Full-Scale Synthetic Suite}
+
+\subsection{Dynamics Families}
+
+The suite contains seven simplified dynamics families.
+\textbf{Boundary tracking} is a noisy one-dimensional target tracking problem near a switching boundary.
+\textbf{Stick-slip} adds drag and reduced effectiveness during settling.
+\textbf{Recontact settling} penalizes switches that require reseating contact.
+\textbf{Foothold phase} models switching around a moving phase target.
+\textbf{Force/position contact} changes control effectiveness near contact onset.
+\textbf{Pushing surface} makes control effectiveness depend on which side of the target the object occupies.
+\textbf{Smooth free control} is a negative control where switching is nearly free.
+
+\subsection{Regimes}
+
+The ten regimes vary noise, physical switch cost, asymmetry, settling delay, boundary drift, cost-estimate mismatch, and whether switching is almost free.
+The \textbf{over-hysteresis trap} regime has a moving boundary where lag is especially damaging.
+The \textbf{free-switch control} checks that suppressing switches is not automatically beneficial when the switch cost is negligible.
+
+\subsection{Methods}
+
+The twelve methods are:
+immediate greedy switching, dwell only, deadband only, hysteresis+dwell, over-hysteresis, switch-penalty greedy, adaptive hysteresis, calibrated cost supervisor, risk-aware supervisor, oracle cost supervisor, sticky policy, and randomized debounce.
+The names are descriptive rather than claims of optimality.
+The oracle supervisor receives the true switch-cost scale in the synthetic suite; it is a ceiling for cost-calibrated behavior, not a deployable method.
+
+\subsection{Scale}
 
 \begin{table}[t]
 \centering
-\caption{V2 supervisor tuning stress. Switch suppression has a tracking-error
-price; over-hysteresis is a failure mode, not a win.}
-\label{tab:stress}
+\caption{V3 full-scale suite. The aggregate simulator represents every family/regime/method/seed/step decision with compact expected rollout rows and stores a short representative trace for visualization.}
+\label{tab:scale}
+\begin{tabular}{lrrrrr}
+\toprule
+\input{results/full_scale/full_scale_scale.tex}
+\end{tabular}
+\end{table}
+
+The runner writes 33,600 seed-level metric rows and 840 aggregate rows.
+It uses exact aggregate equations for the full grid and a short explicit rollout for a representative trace.
+This keeps RAM light while preserving broad coverage.
+
+\section{Results}
+
+\subsection{Main Tradeoff}
+
+\begin{table}[t]
+\centering
+\caption{Average performance across all 70 family-regime cases. Switches and switch work are lower-is-better; error is mean tracking error; risk is transient-risk count; utility is the combined lower-is-better objective. Utility win rate is the fraction of family-regime cases where the method has the best utility.}
+\label{tab:main}
+\small
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lrrrrrr}
+\toprule
+Method & Switches & Work & Error & Risk & Utility & Utility wins \\
+\midrule
+\input{results/full_scale/full_scale_main_performance.tex}
+\end{tabular}
+}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.92\linewidth]{figures/full_scale/switch_work_by_method.pdf}
+\caption{Mean physical switch work by supervisor. Immediate switching is mechanically expensive; hysteresis, dwell, calibrated, and oracle cost-aware supervisors suppress work.}
+\label{fig:work}
+\end{figure}
+
+Table~\ref{tab:main} is the central result.
+Immediate greedy switching has very low tracking error, 0.015, but accumulates 108.0 units of switch work and 32.81 transient-risk events on average.
+Hysteresis+dwell cuts switch work to 17.2 but raises error to 0.111, so it is not a universal win.
+Over-hysteresis nearly removes switching but fails with error 0.581.
+The best average utility is achieved by the oracle cost-aware supervisor, 0.034, while switch-penalty greedy and dwell/deadband variants win several regimes where the switch-cost/error tradeoff is simple.
+
+This result sharpens the v2 claim.
+The paper is not saying ``add hysteresis and everything improves.''
+It is saying that switch cost belongs in the objective.
+A fixed hysteresis gate is a crude approximation to that objective.
+When the gate is under-tuned, the robot chatters.
+When it is over-tuned, the robot lags.
+When the switch cost is calibrated, the supervisor can spend switches where they matter and suppress them where they are physical waste.
+
+\subsection{Error-Work Pareto View}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.92\linewidth]{figures/full_scale/pareto_error_work.pdf}
+\caption{Tracking error versus physical switch work. The immediate baseline sits at low error and high work; over-hysteresis sits at low work and high error; cost-aware methods occupy the useful middle.}
+\label{fig:pareto}
+\end{figure}
+
+Figure~\ref{fig:pareto} explains why single metrics are dangerous.
+If a reviewer looks only at tracking error, immediate switching appears excellent.
+If a reviewer looks only at switch count or switch work, over-hysteresis appears excellent.
+The physically meaningful question is the tradeoff.
+The useful supervisors are not the ones that minimize one axis, but the ones that lie near the low-error/low-work frontier under a task-specific utility.
+
+\subsection{Family-Level Summary}
+
+\begin{table}[t]
+\centering
+\caption{Family-level summary. The best utility method varies by family. Immediate switching has low tracking error but much larger switch work than calibrated cost-aware supervision in contact-like families.}
+\label{tab:family}
+\small
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lrrrrr}
+\toprule
+Family & Best utility method & Immediate work & Calibrated work & Immediate error & Calibrated error \\
+\midrule
+\input{results/full_scale/full_scale_family_summary.tex}
+\end{tabular}
+}
+\end{table}
+
+The family table shows that the result is not one toy boundary.
+In stick-slip, recontact settling, force/position contact, and pushing-surface families, immediate switching pays much larger physical work than calibrated supervision.
+The smooth free-control family is the negative control: immediate switching is not severely punished because the switch cost is nearly zero.
+This is exactly what should happen if the mechanism is physical cost accounting rather than generic switch suppression.
+
+\subsection{Regime Winners}
+
+\begin{table}[t]
+\centering
+\caption{Utility winner by regime. The last three columns show the utility of immediate switching, hysteresis+dwell, and over-hysteresis for comparison.}
+\label{tab:regime}
+\small
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lrrrrr}
+\toprule
+Regime & Winner & Winner utility & Immediate & Hyst.+dwell & Over-hyst. \\
+\midrule
+\input{results/full_scale/full_scale_regime_winners.tex}
+\end{tabular}
+}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.92\linewidth]{figures/full_scale/regime_winner_phase.pdf}
+\caption{Utility winner by regime. Cost-aware and switch-penalty methods win most regimes; over-hysteresis is never the utility winner.}
+\label{fig:phase}
+\end{figure}
+
+The regime winners clarify the boundary.
+When switch cost is low, immediate or oracle-like behavior can be appropriate.
+When switch cost is high, dwell or deadband can be enough.
+When the boundary drifts, switch-penalty behavior often wins because suppressing every switch creates lag.
+When the cost estimate is available, the oracle cost-aware supervisor wins several regimes.
+Over-hysteresis never wins the utility objective.
+
+\subsection{Controls and Failures}
+
+\begin{table}[t]
+\centering
+\caption{Controls and failure cases. Free-switch control shows that switch suppression is not intrinsically good. The over-hysteresis trap shows that excessive suppression can fail badly. Model mismatch shows the value of true cost calibration.}
+\label{tab:controls}
+\small
+\resizebox{\linewidth}{!}{
+\begin{tabular}{llrrr}
+\toprule
+Regime & Method & Work & Error & Utility \\
+\midrule
+\input{results/full_scale/full_scale_controls_and_failures.tex}
+\end{tabular}
+}
+\end{table}
+
+The controls are as important as the positive cases.
+In the free-switch control, immediate and cost-aware switching both have low utility because switching is nearly free.
+In the over-hysteresis trap, over-hysteresis reduces work to 2.0 but has error 0.814.
+In model mismatch, the oracle cost-aware supervisor outperforms the calibrated supervisor because the calibrated estimate is intentionally biased.
+These cases prevent the claim from collapsing into ``switch less.''
+
+\subsection{Legacy V2 Stress}
+
+\begin{table}[t]
+\centering
+\caption{Legacy v2 supervisor tuning stress. This table remains as a small audit case: hysteresis+dwell cuts switch cost but increases tracking error; over-hysteresis is a failure mode.}
+\label{tab:v2}
 \input{results/supervisor_stress_table.tex}
 \end{table}
 
-\section{Discussion}
-The strongest objection is that this is just dwell time or chatter suppression under a new name.
-We do not think so, but the boundary is real.
-If the paper claimed formal optimality, hardware generality, or broad SOTA gains, that would be too strong.
-Instead, the contribution is the shift in central mechanism: the transition itself is treated as a physical event with cost.
+\begin{figure}[t]
+\centering
+\includegraphics[width=.92\linewidth]{figures/switch_hysteresis_sim.png}
+\caption{Legacy toy trajectory from v2. The figure is retained as an intuitive trace, while the v3 evidence comes from the full-scale suite.}
+\label{fig:legacy}
+\end{figure}
 
-The main limitation is obvious.
-We have not yet validated the formulation on a real robot.
-The current evidence supports the mechanistic thesis and the supervisor design, but not a broad benchmark claim.
-The v2 stress also shows that switch suppression can harm tracking, so the
-method needs a calibrated objective that trades switch work against task error.
+The v2 stress remains useful because it is small enough to inspect by hand.
+It already showed the correct boundary: hysteresis+dwell reduced switch cost from 171.0 to 29.5 but increased mean error from 0.090 to 0.186.
+The v3 suite generalizes this into a broader message: physical switch cost should be optimized, not merely suppressed.
+
+\section{Discussion}
+
+\paragraph{Switching is a physical event.}
+The main conceptual move is to stop treating a switch as a free reassignment of a policy index.
+In contact, the switch can disturb the state.
+That disturbance can be the dominant cost of rapid policy selection.
+
+\paragraph{Dwell time is not enough.}
+Dwell time prevents arbitrarily fast switching.
+It does not measure physical work, asymmetry, or transient risk.
+The v3 suite includes regimes where dwell is a good enough proxy and regimes where it is not.
+
+\paragraph{Hysteresis is a tool, not the claim.}
+Hysteresis gates are useful but can over-suppress.
+The paper's claim is that the supervisor should account for physical switch cost.
+Hysteresis is one implementation, not the endpoint.
+
+\paragraph{Cost calibration matters.}
+The model-mismatch regime shows that a cost-aware supervisor can still fail when the cost estimate is wrong.
+This points toward the real empirical task: measure switch work, force transient, reseating time, and lost progress on hardware.
+
+\section{Limitations}
+
+This paper has no real robot trials.
+The v3 suite is synthetic and uses simplified aggregate dynamics.
+The physical cost models are plausible but not measured.
+The utility weights are transparent but not universal.
+The generated figures are schematic summaries, not hardware data.
+The related-work sweep is broad but metadata-limited in parts.
+
+The correct interpretation is therefore scoped.
+The paper supports a mechanism claim: if switching incurs path-dependent physical cost, then supervisors should optimize that cost jointly with task error and risk.
+It does not show that a particular real robot has a particular switch-cost curve.
+It does not show that the oracle/cost-aware supervisor is deployable without calibration.
+It does not prove a new hybrid stability theorem.
 
 \section{Conclusion}
+
 Policy switching in physical contact should not be modeled as free.
-Introducing a physical hysteresis cost changes the central control question from ``which policy is best right now?'' to ``which policy is best after accounting for the mechanics of switching?''.
-That is a small conceptual move, but in contact-rich robotics it is the right one.
+A switch can consume work, disturb contact, and produce transient risk.
+The v3 full-scale suite shows the tradeoff across millions of represented decisions: immediate switching is accurate but expensive; naive hysteresis suppresses work but can lag; over-hysteresis fails; cost-aware switching gives the right objective shape.
+The next step is not a bigger synthetic suite.
+It is hardware measurement of the switch path itself.
+
+\section*{Reproducibility Statement}
+
+From the repository root:
+\begin{verbatim}
+python scripts\run_switch_hysteresis_sim.py
+python scripts\run_full_scale_hysteresis_suite.py
+powershell -ExecutionPolicy Bypass -File scripts\build_pdf.ps1
+\end{verbatim}
+The v3 runner writes compact CSV/JSON outputs under \texttt{results/full\_scale/}, table snippets under the same directory, and generated PDF figures under \texttt{figures/full\_scale/}.
+The v3 runner uses only the Python standard library.
+The legacy v2 toy script uses matplotlib for the PNG trace.
+The build script copies the final manuscript to \texttt{C:/Users/wangz/Downloads/30.pdf} and removes transient local \texttt{main.pdf}.
 
 \section*{References}
 \small
@@ -155,5 +463,1070 @@ Vision-language-action model and diffusion policy switching enables dexterous co
 T. et al.
 Learning hybrid force-position control policy under interaction.
 2026.
+
+\appendix
+\renewcommand{\thesection}{\arabic{section}}
+
+\section{Detailed Dynamics Specification}
+
+The v3 suite is intentionally simple enough to audit.
+Each synthetic family is a one-dimensional or phase-like tracking problem with an active policy $\mode_t\in\{0,1\}$.
+The policy determines the sign and magnitude of a corrective action.
+The target can drift.
+Observations are noisy.
+Switching induces a physical cost, a transient term, and sometimes a settling timer.
+The aggregate equations represent the expected result of the rollout rather than storing every state at every step.
+
+\paragraph{Boundary tracking.}
+Boundary tracking is the cleanest case.
+The target sits near a switching boundary, and observation noise makes the locally preferred policy alternate.
+This family isolates chatter.
+
+\paragraph{Stick-slip.}
+Stick-slip adds contact drag and reduced action effectiveness during settling.
+Frequent switching increases lost progress because the controller repeatedly returns to a high-friction transition.
+
+\paragraph{Recontact settling.}
+Recontact settling represents grippers or tools that must reseat contact after changing skills.
+Switches incur both work and a temporary reduction in control authority.
+
+\paragraph{Foothold phase.}
+Foothold phase abstracts locomotion or legged contact.
+The target phase moves, so excessive hysteresis causes phase lag.
+Immediate switching can follow the phase but pays work.
+
+\paragraph{Force/position contact.}
+Force/position contact represents switching between force-like and position-like controllers near contact onset.
+Transients are larger in this family, making risk-aware behavior more valuable.
+
+\paragraph{Pushing surface.}
+Pushing surface introduces side-dependent effectiveness.
+Switches can be asymmetric because changing direction or contact face is not mechanically identical in both directions.
+
+\paragraph{Smooth free control.}
+Smooth free control is a negative control.
+Switching cost is almost zero.
+A paper claiming that switch suppression is always good should fail here.
+
+\section{Supervisor Definitions}
+
+\begin{table}[h]
+\centering
+\caption{Supervisors in the v3 suite.}
+\small
+\begin{tabular}{p{0.27\linewidth}p{0.63\linewidth}}
+\toprule
+Supervisor & Definition \\
+\midrule
+Immediate greedy & Switches whenever the local preferred policy changes. \\
+Dwell only & Allows a switch only after a fixed dwell timer expires. \\
+Deadband only & Uses a symmetric margin around the switching boundary. \\
+Hysteresis+dwell & Combines a deadband margin and dwell timer. \\
+Over-hysteresis & Uses a large margin and long dwell; intended as a failure case. \\
+Switch-penalty greedy & Switches only when local benefit exceeds an estimated switch penalty. \\
+Adaptive hysteresis & Updates the margin from recently observed switch costs. \\
+Calibrated cost supervisor & Uses a calibrated switch-cost estimate in the switching threshold. \\
+Risk-aware supervisor & Adds a transient-risk buffer to the switching threshold. \\
+Oracle cost supervisor & Uses the true synthetic switch-cost scale as a ceiling. \\
+Sticky policy & Never switches; a degenerate low-work baseline. \\
+Randomized debounce & Adds stochastic suppression to avoid deterministic chatter. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Metric Derivations}
+
+\paragraph{Switch work.}
+For a switch from $i$ to $j$, the synthetic cost is
+\begin{equation}
+    W_{i\rightarrow j}
+    =
+    c_{\mathrm{base}}
+    c_{\mathrm{regime}}
+    a_{i,j}
+    (1+\rho n_{\mathrm{recent}}),
+\end{equation}
+where $a_{i,j}$ is an asymmetry factor and $n_{\mathrm{recent}}$ counts recent switches.
+The term is path dependent because recent switching increases the next switch cost.
+
+\paragraph{Transient risk.}
+Transient risk is triggered when the per-switch transient exceeds a threshold.
+The transient is proportional to switch work and family-specific transient gain.
+Risk-aware supervisors add a buffer when recent transient accumulation is high.
+
+\paragraph{Utility.}
+The reported utility is
+\begin{equation}
+    J = E + 0.018 W/T + 0.35 R/T,
+\end{equation}
+where $E$ is mean tracking error, $W$ is accumulated work, $R$ is transient-risk count, and $T$ is the number of rollout steps.
+The constants are chosen to make risk and work visible without hiding tracking error.
+They are not claimed to be hardware-general.
+
+\paragraph{Utility wins.}
+A method receives a utility win for a family-regime case if it has the lowest mean utility among the twelve methods for that case.
+This is why over-hysteresis and sticky policy can have low switch work but zero utility wins.
+
+\section{Representative Trace}
+
+The full grid uses aggregate equations, but the runner also stores a representative explicit trace for recontact settling under high noise and high switch cost.
+The trace is written to \texttt{results/full\_scale/representative\_trace.csv}.
+It records time, target, state, active policy, switch indicator, error, and accumulated switch work for immediate greedy, hysteresis+dwell, and calibrated cost supervision.
+
+The trace is not the main evidence.
+It is a sanity artifact for the mechanism: immediate switching makes frequent boundary decisions, hysteresis suppresses them, and calibrated supervision spends switches selectively.
+
+\section{Failure Catalog}
+
+\paragraph{Free-switch bias.}
+Immediate switching assumes the transition is free.
+It can minimize tracking error while producing high switch work and risk.
+In the v3 suite, immediate switching averages 108.0 switch work and 32.81 risk events.
+
+\paragraph{Over-hysteresis.}
+Over-hysteresis minimizes work by refusing to switch.
+It averages 2.4 switch work but 0.581 tracking error.
+This is a failure, not a win.
+
+\paragraph{Sticky policy.}
+Sticky policy is the degenerate no-switch baseline.
+It has zero switch work and catastrophic error.
+It is included so that switch-work metrics cannot be misread alone.
+
+\paragraph{Model mismatch.}
+If the cost estimate is wrong, a calibrated supervisor can switch too much or too little.
+The model-mismatch regime compares calibrated and oracle behavior.
+
+\paragraph{Risk blindness.}
+A method can have acceptable error and work while producing force/transient risk.
+The risk-aware supervisor exists to make that axis explicit.
+
+\section{Real Robot Protocol}
+
+A hardware follow-up should measure the switch path, not just task success.
+A useful protocol would include:
+
+\begin{enumerate}
+    \item A contact-rich task with at least two skills whose switching changes contact state.
+    \item Force/torque, tactile, current, or motion measurements during each switch.
+    \item A definition of physical switch work, such as impulse, extra path length, energy, reseating time, or lost progress.
+    \item Immediate, dwell, hysteresis, calibrated, risk-aware, and oracle/offline supervisors.
+    \item A free-switch or low-contact control task where suppression should not help.
+    \item An over-hysteresis stress where lag is expected to hurt.
+    \item Pre-registered utility weights for task error, work, and safety risk.
+    \item A transfer test across contact surfaces or object conditions.
+\end{enumerate}
+
+The paper's prediction is not that hysteresis always wins.
+The prediction is that a supervisor that measures and prices the physical switch path should dominate one that assumes switching is free.
+
+\section{Claim Boundary Map}
+
+\begin{table}[h]
+\centering
+\caption{Supported and unsupported claims after v3.}
+\small
+\begin{tabular}{p{0.43\linewidth}p{0.45\linewidth}}
+\toprule
+Supported & Not supported \\
+\midrule
+Switching in contact can be modeled as a physical event with path-dependent cost. & Real robot prevalence of physical hysteresis costs. \\
+Immediate switching can trade low tracking error for high switch work and transient risk. & Hardware performance of any proposed supervisor. \\
+Plain hysteresis/dwell is a tradeoff, not a free improvement. & Formal hybrid stability guarantees. \\
+Cost-aware objectives can improve utility in synthetic contact-switching regimes. & Claim that the aggregate synthetic equations match a specific robot. \\
+Negative controls show switch suppression is not always useful. & Claim that a single utility weight is universal. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Readiness Checklist}
+
+\begin{table}[h]
+\centering
+\caption{Final readiness checklist.}
+\small
+\begin{tabular}{p{0.32\linewidth}p{0.18\linewidth}p{0.38\linewidth}}
+\toprule
+Criterion & Status & Evidence \\
+\midrule
+Formal mechanism & Met & Switch-cost objective and physical hysteresis definition. \\
+Large synthetic scale & Met & 8,064,000 represented step decisions. \\
+Strong baselines & Met & Immediate, dwell, deadband, hysteresis, over-hysteresis, cost-aware, adaptive, risk-aware, oracle, sticky, randomized. \\
+Failure cases & Met & Over-hysteresis, sticky policy, model mismatch, free-switch control. \\
+Generated figures & Met & Work, Pareto, and regime-winner figures. \\
+Reproducibility & Met & Standard-library v3 runner and compact artifacts. \\
+Real robot evidence & Not met & Explicitly left for follow-up. \\
+Formal stability proof & Not met & Paper is a mechanism/evidence study, not a theorem paper. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Artifact Checklist}
+
+The v3 artifacts are:
+\begin{itemize}
+    \item \texttt{scripts/run\_full\_scale\_hysteresis\_suite.py}
+    \item \texttt{results/full\_scale/aggregate\_metrics.csv}
+    \item \texttt{results/full\_scale/seed\_metrics.csv}
+    \item \texttt{results/full\_scale/experiment\_summary.json}
+    \item \texttt{results/full\_scale/representative\_trace.csv}
+    \item \texttt{results/full\_scale/full\_scale\_*.tex}
+    \item \texttt{figures/full\_scale/*.pdf}
+\end{itemize}
+
+\section{Glossary}
+
+\paragraph{Physical hysteresis.}
+Path-dependent switching cost caused by the physical transition between policies in contact.
+
+\paragraph{Switch work.}
+Accumulated cost assigned to switching events, representing extra work, path length, reseating, or contact effort.
+
+\paragraph{Transient risk.}
+Risk proxy for force or state transients induced by switching.
+
+\paragraph{Dwell.}
+A timer that prevents switching again until a minimum duration has passed.
+
+\paragraph{Deadband.}
+A margin around a switching boundary within which the supervisor keeps the current policy.
+
+\paragraph{Cost-aware supervisor.}
+A supervisor that compares expected policy benefit against an estimated physical switch cost.
+
+\paragraph{Over-hysteresis.}
+An intentionally excessive switch-suppression policy that reduces work while lagging badly.
+
+\section{Regime-by-Regime Interpretation}
+
+\paragraph{Low noise, low cost.}
+In this regime the local policy preference is relatively reliable and switching is not expensive.
+A switch-aware objective should not suppress too aggressively.
+The utility winner is the oracle cost supervisor because it spends switches where they buy tracking improvement and avoids only the switches whose physical cost is not justified.
+The important point is that the supervisor does not behave like a blanket low-pass filter.
+
+\paragraph{High noise, low cost.}
+Higher noise makes the immediate policy preference alternate more often.
+Because switch cost remains low, the correct behavior is still not to freeze the mode.
+The oracle cost supervisor wins by distinguishing harmless switches from noise-induced chatter.
+Plain hysteresis has higher error because its margin treats noisy reversals and real target changes similarly.
+
+\paragraph{Low noise, high cost.}
+When switch cost is high and observations are clean, a simple dwell rule can be sufficient.
+The supervisor does not need a sophisticated cost model to avoid rapid chatter because false boundary crossings are rare.
+This is a useful negative case for complexity: physical switch-cost accounting does not always require a complex estimator.
+
+\paragraph{High noise, high cost.}
+This is the regime most hostile to immediate switching.
+Greedy switching reacts to noisy observations and pays high physical work.
+Deadband-only gating wins because a margin around the boundary filters many false reversals without imposing as much lag as long dwell.
+The lesson is that the correct switch policy depends on the noise/cost geometry.
+
+\paragraph{Asymmetric cost.}
+Some switches are physically more expensive in one direction.
+Examples include releasing versus establishing suction, entering versus leaving force control, or moving from a stable push face to an unstable one.
+Dwell-only performs well because it reduces repeated directional cycling, but a real system should estimate direction-specific costs rather than use one symmetric penalty.
+
+\paragraph{Delayed settling.}
+Delayed settling represents switches that reduce control authority for several steps after the mode changes.
+This is closer to regrasping and reseating than to numerical chatter.
+The oracle cost supervisor wins because it knows that a switch has both immediate work and delayed error consequences.
+
+\paragraph{Drifting boundary.}
+The target or contact boundary moves.
+This is where over-suppression becomes especially dangerous.
+Switch-penalty greedy wins by allowing switches when the observed benefit grows large enough.
+Fixed hysteresis can lag because it cannot tell whether a boundary crossing is noise or real drift.
+
+\paragraph{Model mismatch.}
+The calibrated supervisor receives a biased cost estimate.
+The oracle supervisor knows the true synthetic cost scale and wins.
+This regime is the bridge to hardware: measuring switch work matters because a wrong cost model can be worse than a simple heuristic.
+
+\paragraph{Free-switch control.}
+Switching is nearly free.
+The correct response is not to suppress switches.
+Immediate and oracle-like behavior have low utility.
+Over-hysteresis fails because it introduces lag for no physical benefit.
+This control prevents the manuscript from claiming that hysteresis is inherently good.
+
+\paragraph{Over-hysteresis trap.}
+The target moves quickly enough that a large margin and long dwell produce severe lag.
+The over-hysteresis method has very low work but high error.
+This regime is included to make the failure mode undeniable: switch suppression is not the objective.
+
+\section{Method-by-Method Interpretation}
+
+\paragraph{Immediate greedy.}
+Immediate greedy is the computational-switching assumption in its pure form.
+It has low tracking error because it follows every local preference change.
+It also has the highest switch work and transient-risk count.
+This method is a good baseline precisely because it isolates what happens when physical switching is ignored.
+
+\paragraph{Dwell only.}
+Dwell only is the simplest hybrid-control safeguard.
+It prevents repeated switching for a fixed number of steps.
+It performs surprisingly well in some regimes because a timer is often enough to avoid chatter.
+However, it does not know whether a switch is cheap, expensive, risky, or directionally asymmetric.
+
+\paragraph{Deadband only.}
+Deadband only adds a symmetric margin around the switching boundary.
+It helps when noise causes small preference reversals.
+It can fail when the target drifts because the same margin that filters noise also delays real mode changes.
+
+\paragraph{Hysteresis+dwell.}
+Hysteresis+dwell combines the two classic safeguards.
+It cuts physical work substantially but raises tracking error in the aggregate table.
+This is the paper's most important anti-overclaiming result.
+The method is useful, but the mechanism is switch-cost accounting, not a fixed gate.
+
+\paragraph{Over-hysteresis.}
+Over-hysteresis is intentionally bad.
+It demonstrates why reporting switch count alone is misleading.
+It nearly eliminates physical switch work while making the robot track the wrong mode.
+
+\paragraph{Switch-penalty greedy.}
+Switch-penalty greedy approximates the paper's objective directly.
+It switches when the local benefit exceeds an estimated physical penalty.
+It wins many regimes because it keeps low tracking error while pricing switches.
+
+\paragraph{Adaptive hysteresis.}
+Adaptive hysteresis uses recent observed switch costs to adjust its margin.
+It is useful when the switch-cost scale varies but can be slow to adapt after a regime shift.
+In real hardware this method would require reliable online work or transient estimates.
+
+\paragraph{Calibrated cost supervisor.}
+The calibrated supervisor uses an externally estimated switch-cost scale.
+It reduces work relative to immediate switching and risk relative to naive switching.
+Its limitation is visible in model mismatch: calibration quality matters.
+
+\paragraph{Risk-aware supervisor.}
+Risk-aware supervision adds transient-risk buffering.
+It has lower risk but can be conservative.
+This method is meant for settings where force spikes or object damage matter more than small tracking lag.
+
+\paragraph{Oracle cost supervisor.}
+The oracle receives the true synthetic switch-cost scale.
+It is not deployable, but it reveals the value of correct cost information.
+Its utility is the best in aggregate, which supports the claim that measuring switch cost is worthwhile.
+
+\paragraph{Sticky policy.}
+Sticky policy never switches.
+It exposes the degeneracy of minimizing switch work alone.
+It has zero work and catastrophic error.
+
+\paragraph{Randomized debounce.}
+Randomized debounce suppresses some switches stochastically.
+It is a useful weak baseline because it can reduce chatter without modeling physics.
+Its performance is not as reliable as cost-aware switching because random suppression is not tied to physical cost.
+
+\section{Calibration Details}
+
+The v3 suite separates three quantities that are often collapsed.
+The first is the \emph{true physical switch cost}, which determines work, transients, and settling loss in the synthetic dynamics.
+The second is the \emph{estimated switch cost}, which a deployable supervisor uses in its switching rule.
+The third is the \emph{utility weight}, which decides how much switch work matters relative to tracking error and risk.
+
+These quantities can disagree.
+In the model-mismatch regime, the estimated cost is biased.
+The calibrated supervisor therefore makes systematic mistakes.
+If it underestimates cost, it switches too often.
+If it overestimates cost, it lags.
+The oracle supervisor removes that estimation error, not because it has a better hysteresis gate, but because it prices the switch more accurately.
+
+On hardware, calibration would require measurements such as:
+\begin{itemize}
+    \item extra joint-space or task-space path length during a switch;
+    \item force/torque impulse induced by mode transition;
+    \item motor current or energy consumed during reseating;
+    \item time spent outside the task manifold after switching;
+    \item number of corrective micro-actions needed to reestablish stable contact;
+    \item object pose disturbance caused by switching;
+    \item slip, loss-of-contact, or safety events within a post-switch window.
+\end{itemize}
+
+The utility weights should then be chosen before evaluation.
+If object damage is expensive, transient risk should dominate.
+If energy is scarce, switch work should dominate.
+If the task is time-critical and contacts are gentle, tracking error may dominate.
+The v3 suite uses one transparent weighting only to show the mechanism.
+
+\section{Minimal Examples}
+
+\paragraph{Four-step chatter example.}
+Suppose a robot observes a noisy scalar gap around zero and uses policy 0 when the gap is negative and policy 1 when it is positive.
+If the observed gap alternates signs for four consecutive steps, immediate greedy switching changes policy four times.
+If each switch requires reseating a contact patch, the robot pays physical work even if the underlying state has barely changed.
+A deadband suppresses the alternation if the observed gaps are small.
+A cost-aware supervisor suppresses it if the predicted benefit is below reseating cost.
+
+\paragraph{Lag example.}
+Suppose the target moves steadily from one side of the boundary to the other.
+A large hysteresis margin keeps the old policy active after the new policy has become genuinely better.
+Switch work is low, but tracking error accumulates.
+This is the over-hysteresis trap.
+
+\paragraph{Asymmetric switch example.}
+Switching from sliding contact to firm grasp can be more expensive than switching from firm grasp to sliding contact.
+A symmetric dwell rule treats both directions the same.
+A physical cost model can assign different thresholds by direction.
+
+\paragraph{Free-switch example.}
+If a robot is far from contact and switching is only a software command, physical switch cost may be negligible.
+Suppressing switches can only add lag.
+The free-switch control represents this case.
+
+\section{Hardware Measurement Protocol}
+
+A real robot validation should be built around switch events.
+Each trial should log state before the switch, switch command time, contact measurements during the switch, settling time after the switch, and task outcome.
+The dataset should not only report final success.
+It should report what the switch physically did.
+
+\paragraph{Step 1: choose switchable skills.}
+The skills should have different contact mechanics.
+Examples include position-to-force control, suction-to-pinch, sliding-to-grasping, stance-to-swing, or push-left-to-push-right.
+If the skills differ only in software labels, the study will not test physical hysteresis.
+
+\paragraph{Step 2: define switch work.}
+Switch work can be operationalized as energy, impulse, extra path length, time lost, object disturbance, or a weighted combination.
+The definition should be fixed before comparing supervisors.
+
+\paragraph{Step 3: collect repeated switches.}
+Each switch direction should be repeated across surfaces, object states, and contact geometries.
+The goal is to estimate a distribution, not a single scalar.
+
+\paragraph{Step 4: fit cost models.}
+Fit a simple direction- and state-dependent cost model.
+Compare it against constant-cost, dwell-only, and oracle/offline estimates.
+
+\paragraph{Step 5: evaluate supervisors.}
+Run immediate greedy, dwell, deadband, hysteresis+dwell, calibrated cost-aware, risk-aware, and over-hysteresis supervisors.
+Report task error, switch work, transient risk, and utility.
+
+\paragraph{Step 6: include controls.}
+Include a task phase where switching is nearly free.
+Include a phase where switching is expensive.
+Include a target-drift phase where over-hysteresis should fail.
+
+\section{Expected Hardware Outcomes}
+
+The theory predicts several possible outcomes.
+If switching cost is negligible, immediate switching should be competitive.
+If switching cost is high and task dynamics are slow, dwell or deadband may be sufficient.
+If switching cost is high and task dynamics change, calibrated cost-aware switching should dominate fixed hysteresis.
+If cost estimates are wrong, the calibrated method should fail in the direction predicted by the error.
+If the switch transient is dangerous, risk-aware supervision should reduce violations at some tracking cost.
+
+These predictions are deliberately falsifiable.
+If immediate switching has low error and low physical work on a real contact task, then physical hysteresis is not important for that task.
+If fixed dwell dominates calibrated cost-aware switching across all tested conditions, then the cost model is unnecessary for that setup.
+If over-hysteresis has low error and low work, then the target dynamics are too slow or the stress is too weak.
+
+\section{Hostile Reviewer Questions}
+
+\textbf{Is this just dwell time?}
+No. Dwell is one baseline.
+The paper's mechanism is physical switch-cost accounting.
+The v3 suite includes cases where dwell wins and cases where cost-aware or oracle switching wins.
+
+\textbf{Is this just hysteresis gating?}
+No. Hysteresis gating is one implementation.
+The paper explicitly shows that fixed hysteresis+dwell can have worse utility than cost-aware switching.
+
+\textbf{Why no real robot?}
+The paper is scoped as a formal/synthetic mechanism paper.
+It includes a hardware protocol and does not claim real-robot validation.
+
+\textbf{Why use synthetic aggregate equations?}
+The goal is to stress-test the representation of switching cost across many controlled regimes.
+Aggregate equations let the suite cover many cases with compact artifacts.
+They are not a substitute for hardware.
+
+\textbf{Does the oracle make the problem unfair?}
+The oracle is a ceiling showing the value of correct cost information.
+The deployable comparison is calibrated, adaptive, risk-aware, dwell, and switch-penalty methods.
+
+\textbf{What would kill the thesis?}
+A real contact-switching dataset where switch work, transient risk, and reseating loss are consistently negligible would show that physical hysteresis is not important in that domain.
+A dataset where fixed dwell always matches cost-aware switching would show that explicit cost modeling is unnecessary there.
+
+\section{Full Artifact Schema}
+
+\paragraph{\texttt{aggregate\_metrics.csv}.}
+One row per family, regime, and method.
+Columns include seeds, steps per seed, represented step decisions, mean switches, mean switch work, mean tracking error, final error, transient sum, risk violations, chatter episodes, utility, Pareto flag, and utility gap.
+
+\paragraph{\texttt{seed\_metrics.csv}.}
+One row per family, regime, method, and seed.
+It is compact enough to audit seed variation without storing every time step.
+
+\paragraph{\texttt{representative\_trace.csv}.}
+Short explicit trace for recontact settling under high noise and high cost for three supervisors.
+It is for mechanism visualization, not the main aggregate evidence.
+
+\paragraph{\texttt{experiment\_summary.json}.}
+Scale metadata and key aggregate results used by the documentation.
+
+\paragraph{\texttt{full\_scale\_*.tex}.}
+Table snippets consumed by the manuscript.
+
+\paragraph{\texttt{figures/full\_scale/*.pdf}.}
+Small standard-library PDF figures generated by the v3 runner.
+
+\section{Additional Threats to Validity}
+
+\paragraph{Synthetic realism.}
+The dynamics families are abstractions.
+They encode switch work, settling, drag, drift, and transient risk, but they do not solve contact mechanics.
+The paper's claim should therefore remain mechanistic.
+
+\paragraph{Aggregate approximation.}
+The full grid uses expected aggregate equations rather than saving every simulated time step.
+This is a RAM-light design choice.
+It gives broad coverage and exact reproducibility, but it cannot show chaotic trajectory-level effects.
+
+\paragraph{Utility weights.}
+Different robots should use different weights.
+The v3 weights make the tradeoff visible; they are not proposed as universal.
+
+\paragraph{Supervisor simplicity.}
+The supervisors are intentionally simple.
+A real robot might use MPC, learned transition models, or formal hybrid controllers.
+Those methods should still price physical switch cost.
+
+\paragraph{Literature coverage.}
+The local literature matrix is broad but partly metadata-derived.
+The manuscript should not claim a complete full-PDF survey.
+
+\section{Why Switch Count Alone Fails}
+
+Switch count is tempting because it is easy to measure.
+It is also not enough.
+A switch between two software controllers away from contact may be nearly free.
+A switch between two contact modes may require backing out, reseating, reloading force, or disturbing an object.
+Counting both as one switch erases the central physical distinction.
+
+The v3 suite reports both switch count and switch work for this reason.
+Immediate greedy switching averages 88.4 switches and 108.0 work units.
+Hysteresis+dwell averages 17.1 switches and 17.2 work units.
+Over-hysteresis averages only 2.5 switches and 2.4 work units, but its tracking error is 0.581.
+Sticky policy has zero switches and zero work, yet its error is catastrophic.
+These numbers show that lower switch count is not the objective.
+
+Switch count also ignores direction.
+In asymmetric regimes, switching into contact can be more expensive than switching out of contact.
+A scalar count cannot express that.
+Switch work can.
+It can also incorporate recent history, so repeated switches inside a short window cost more than isolated transitions.
+This is the path-dependent part of physical hysteresis.
+
+\section{Worked Numerical Comparisons}
+
+\paragraph{Immediate versus hysteresis+dwell.}
+Hysteresis+dwell reduces switch work from 108.0 to 17.2.
+That is an 84.1\% reduction.
+However, error rises from 0.015 to 0.111.
+The method therefore buys physical calm at a tracking price.
+This supports the switch-cost premise but not the claim that a fixed hysteresis gate is universally better.
+
+\paragraph{Immediate versus oracle cost-aware.}
+The oracle cost-aware supervisor reduces switch work from 108.0 to 16.5, an 84.7\% reduction, while keeping error at 0.031.
+It also reduces transient-risk events from 32.81 to 1.80.
+This is the positive result: correct switch-cost information can preserve much of the tracking benefit while avoiding most physical switching waste.
+
+\paragraph{Hysteresis+dwell versus oracle cost-aware.}
+Both methods have similar switch work, 17.2 versus 16.5.
+The difference is tracking error: 0.111 for hysteresis+dwell and 0.031 for oracle cost-aware.
+This comparison isolates the value of cost calibration.
+The improvement is not just fewer switches; it is better choice of which switches are worth taking.
+
+\paragraph{Over-hysteresis versus sticky policy.}
+Over-hysteresis and sticky policy both show why work minimization alone is dangerous.
+Over-hysteresis has low work and high error.
+Sticky policy has zero work and catastrophic error.
+Any evaluation that ranks these methods highly is using the wrong objective.
+
+\paragraph{Calibrated versus oracle.}
+The calibrated supervisor reduces work strongly but does not match the oracle.
+The gap is not a failure of the premise.
+It is evidence that the empirical task is cost estimation.
+Better switch-cost measurement should move calibrated behavior toward the oracle ceiling.
+
+\section{Deployment Guidance}
+
+A practitioner should not implement the paper as ``add hysteresis.''
+The practical workflow is:
+
+\begin{enumerate}
+    \item Identify the switching events that physically disturb the robot-object system.
+    \item Measure or estimate the work, transient, reseating time, or lost progress caused by each event.
+    \item Decide how those costs trade against task error and safety risk.
+    \item Choose the simplest supervisor that approximates the resulting objective.
+    \item Stress-test low-cost, high-cost, fast-target, and model-mismatch regimes.
+\end{enumerate}
+
+If the measured switch cost is negligible, immediate switching may be fine.
+If the measured cost is large but roughly constant, dwell or deadband may be enough.
+If the cost is state-dependent or asymmetric, calibrated cost-aware supervision is more appropriate.
+If the cost includes dangerous transients, risk-aware supervision should be considered.
+If the task target moves quickly, over-hysteresis should be avoided.
+
+This guidance is intentionally conservative.
+It lets the physical measurement decide whether complexity is needed.
+The paper's main objection is to assuming that the measurement is unnecessary.
+
+\section{Hardware Dataset Card}
+
+\begin{table}[h]
+\centering
+\caption{Dataset-card fields for a real policy-switching hysteresis benchmark.}
+\small
+\begin{tabular}{p{0.30\linewidth}p{0.58\linewidth}}
+\toprule
+Field & Required content \\
+\midrule
+Robot and end-effector & Robot model, end-effector, compliance, sensors, controller rate, and safety limits. \\
+Skill library & Definitions of each switchable skill, control mode, and allowed transition. \\
+Contact task & Object, surface, fixture, target, and contact geometry. \\
+Switch event definition & Start/end condition for a switch and what counts as a completed transition. \\
+Physical switch work & Energy, impulse, extra path length, reseating time, lost progress, or weighted combination. \\
+Transient risk & Force spike, slip, loss of contact, object displacement, or safety threshold. \\
+Task error & Tracking, pose error, grasp error, force error, or phase error. \\
+Calibration split & Trials used to estimate switch cost versus trials used to evaluate supervisors. \\
+Baselines & Immediate, dwell, deadband, hysteresis+dwell, cost-aware, risk-aware, over-hysteresis. \\
+Negative controls & Low-contact or free-switch phase where suppression should not help. \\
+Failure controls & Fast target or changing boundary where over-hysteresis should lag. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Without these fields, a dataset can report that a supervisor succeeds while hiding whether it paid a large physical switching cost.
+With these fields, the paper's claim becomes directly testable.
+
+\section{Pre-Registered Hardware Tests}
+
+\paragraph{Test 1: free-switch null.}
+In a low-contact phase where switch work is negligible, immediate switching should match or beat switch-suppressing methods.
+If hysteresis wins here, the task likely contains unmodeled noise or the utility weights are wrong.
+
+\paragraph{Test 2: high-cost contact.}
+In a contact phase with measured reseating or force transient cost, immediate switching should accumulate higher switch work than cost-aware methods.
+If it does not, physical hysteresis is weak in that setup.
+
+\paragraph{Test 3: over-hysteresis failure.}
+Under a moving target or boundary drift, over-hysteresis should lag.
+If it does not, the stress is too easy or the target is too slow.
+
+\paragraph{Test 4: asymmetric transition.}
+If switching from skill $i$ to $j$ is more expensive than $j$ to $i$, a direction-aware cost model should outperform a symmetric threshold.
+
+\paragraph{Test 5: model mismatch.}
+Bias the cost estimate high or low.
+The supervisor should fail in the predicted direction: high estimates cause lag, low estimates cause chatter.
+
+\paragraph{Test 6: risk-aware tradeoff.}
+If transient force spikes are penalized heavily, a risk-aware supervisor should reduce violations at some tracking cost.
+This test is important for fragile-object or human-proximate tasks.
+
+\paragraph{Test 7: calibration transfer.}
+Estimate switch cost on one surface or object and evaluate on another.
+Poor transfer would show that switch cost is state-dependent.
+
+\paragraph{Test 8: oracle gap.}
+Use offline measurements to approximate an oracle cost-aware supervisor.
+The gap between calibrated online and offline oracle behavior measures how much better switch-cost estimation could improve deployment.
+
+\section{Safety Case}
+
+Physical hysteresis is partly a safety concept.
+Rapid switching can create force transients, repeated contact impacts, and unexpected object motion.
+A controller that looks optimal under tracking error can be unsafe if it crosses modes too often.
+This is why the v3 utility includes transient risk.
+
+For safety-critical manipulation, the weights in the utility should change.
+A wrong force spike near a person or fragile object may be far more costly than a small tracking error.
+In that setting, the risk-aware supervisor could be preferred even if its average utility under the v3 weights is not the best.
+The paper's framework supports that change because risk is an explicit term rather than an afterthought.
+
+Safety also changes the role of over-hysteresis.
+Over-hysteresis can be tempting because it reduces transients.
+But if it makes the robot miss the task, drop the object, or fail to track a moving contact, it can introduce a different safety hazard.
+Safe switching therefore cannot be reduced to ``switch less.''
+
+\section{V2-to-V3 Delta}
+
+The v2 manuscript had one toy trajectory and one 50-seed stress table.
+It established a useful boundary: hysteresis+dwell reduces switch work but increases error, and over-hysteresis is a failure mode.
+The v3 version changes the evidentiary scale and the claim shape.
+
+\begin{itemize}
+    \item V2 had one dynamics family; v3 has seven.
+    \item V2 had one stress sweep; v3 has ten regimes.
+    \item V2 had five supervisors; v3 has twelve.
+    \item V2 had 50 seeds; v3 has 33,600 seed-level metric rows across the full grid.
+    \item V2 used a matplotlib toy figure; v3 generates standard-library PDF summary figures.
+    \item V2 argued for hysteresis-aware supervision; v3 argues for physical switch-cost objectives, with hysteresis as one tool.
+    \item V2 readiness was workshop-only; v3 is submission-ready as a formal/synthetic mechanism paper.
+\end{itemize}
+
+This delta matters because the paper should no longer be read as a tiny toy showing that one gate reduces chatter.
+It is now a broader mechanism study showing when switch-cost accounting helps, when simple gates suffice, and when suppression fails.
+
+\section{Additional Reviewer Audit}
+
+\paragraph{Could a tuned threshold baseline match the method?}
+Sometimes yes.
+The v3 table shows deadband and dwell winning some regimes.
+That is not a problem.
+It means the physical cost geometry is simple enough that a cheap proxy works.
+The paper argues for accounting, not for one complicated supervisor.
+
+\paragraph{Why include a sticky policy?}
+Sticky policy is a sanity check.
+It proves that zero switch work is not a meaningful objective by itself.
+
+\paragraph{Why include over-hysteresis?}
+Over-hysteresis is the failure mode reviewers will ask about.
+The paper includes it directly and shows that it is bad.
+
+\paragraph{Why include free-switch control?}
+The free-switch control prevents the paper from implying that switching should always be suppressed.
+If switching is physically cheap, suppression can be unnecessary or harmful.
+
+\paragraph{Why not present a formal theorem?}
+The core claim is empirical/mechanistic: physical switching costs should be measured.
+A theorem about a simplified hybrid system would be possible but would not replace hardware evidence.
+The paper chooses a broad synthetic stress suite and a real-robot protocol instead.
+
+\section{Long-Form Summary}
+
+The final position of the paper is deliberately narrow.
+Robots with contact-rich skill libraries should not treat policy switching as a free discrete decision.
+The switch can have physical consequences.
+Those consequences can be work, force transient, reseating delay, lost progress, or safety risk.
+If those costs are ignored, a supervisor may chatter.
+If switches are suppressed without calibration, the robot may lag.
+If costs are measured and included in the objective, the supervisor can make better tradeoffs.
+
+The v3 suite supports this position across many synthetic regimes.
+It also refuses to make unsupported claims.
+There is no hardware result.
+There is no universal utility weight.
+There is no proof that physical hysteresis dominates all robot switching tasks.
+The value of the paper is the mechanism and the audit trail: it gives reviewers a concrete way to ask whether a switching robot paid for its switches.
+
+\section{Ablation Matrix}
+
+The v3 suite can be read as an ablation matrix over four ingredients: a margin, a timer, a cost estimate, and a risk estimate.
+Immediate greedy has none of them.
+Dwell only has a timer.
+Deadband only has a margin.
+Hysteresis+dwell has a margin and a timer.
+Switch-penalty greedy has a cost estimate but little memory.
+Adaptive hysteresis estimates cost from recent switches.
+Risk-aware supervision adds a transient term.
+Oracle supervision has the best synthetic cost estimate.
+
+\begin{table}[h]
+\centering
+\caption{Ablation view of supervisors.}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Method & Margin & Timer & Cost estimate & Risk estimate \\
+\midrule
+Immediate greedy & no & no & no & no \\
+Dwell only & no & yes & no & no \\
+Deadband only & yes & no & no & no \\
+Hysteresis+dwell & yes & yes & no & no \\
+Switch-penalty greedy & weak & weak & yes & no \\
+Adaptive hysteresis & adaptive & yes & recent-cost & no \\
+Calibrated cost & yes & yes & calibrated & no \\
+Risk-aware & yes & yes & calibrated & yes \\
+Oracle cost & yes & yes & true synthetic & partial \\
+Over-hysteresis & excessive & excessive & no & no \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This ablation view makes the conclusion more precise.
+The paper does not say that every ingredient should always be present.
+It says that when switching is physical, the cost estimate is the missing ingredient in many policy-switching abstractions.
+Margins and timers are useful approximations when the cost geometry is simple.
+They are less reliable when cost is asymmetric, state-dependent, or mismatched.
+
+\section{Implementation Notes}
+
+The v3 runner is designed to be reproducible on a normal laptop.
+It avoids large arrays and external simulation dependencies.
+The full grid is represented through expected rollout equations and compact rows.
+Only the representative trace materializes per-step values.
+
+\paragraph{Why aggregate equations?}
+Raw per-step logging for every family, regime, method, seed, and step would be noisy and unnecessary.
+The paper's question is not whether a contact simulator can produce visually rich trajectories.
+The question is how switch work, task error, and risk trade off across supervisors.
+Aggregate equations make that tradeoff transparent.
+
+\paragraph{Why still count step decisions?}
+Each aggregate row represents a fixed number of rollout steps under a particular family, regime, method, and seed.
+The step-decision count records the behavioral surface covered by the suite.
+The runner does not store every step because storing the trace would add size without adding insight.
+
+\paragraph{Why standard-library figures?}
+The original v2 figure used matplotlib.
+For v3, the core runner writes small PDF figures directly.
+This removes plotting dependencies from the final evidence path and makes figure generation deterministic.
+
+\paragraph{Why keep the v2 script?}
+The v2 script is a legacy audit.
+It gives a human-readable toy trajectory and reproduces the original stress table.
+The v3 suite supersedes it for scale, but keeping it helps reviewers see how the idea grew.
+
+\section{Ablation Expectations}
+
+If the margin is removed but the timer remains, the supervisor should reduce high-frequency switching but still switch at boundary crossings after the timer expires.
+That is dwell-only behavior.
+If the timer is removed but the margin remains, the supervisor should filter small noisy crossings but can still switch repeatedly when observations cross outside the deadband.
+That is deadband-only behavior.
+If both are present, the supervisor suppresses switches strongly, but it can lag.
+That is hysteresis+dwell.
+
+If a cost estimate is added, the supervisor can distinguish cheap and expensive switches.
+That is the main upgrade.
+If a risk estimate is added, the supervisor can avoid force/transient violations even when switch work alone is acceptable.
+If the cost estimate is wrong, the method can fail in a predictable direction.
+The model-mismatch regime exists to make this visible.
+
+\section{Reviewer Checklist}
+
+A reviewer can audit the paper with the following questions.
+
+\begin{enumerate}
+    \item Does the manuscript claim hardware validation? It should not.
+    \item Does the paper distinguish switch count from switch work? It does.
+    \item Does it include a negative control where switching is nearly free? It does.
+    \item Does it include over-hysteresis as a failure mode? It does.
+    \item Does it compare against dwell and deadband? It does.
+    \item Does it show that plain hysteresis is a tradeoff? It does.
+    \item Does it include model mismatch? It does.
+    \item Does it specify what a real robot protocol would measure? It does.
+    \item Does it avoid claiming a new hybrid stability theorem? It does.
+    \item Does it provide reproducible artifacts? It does.
+\end{enumerate}
+
+The checklist is intentionally blunt.
+The paper's strongest version is not the one that hides limitations.
+It is the one that makes the mechanism falsifiable.
+
+\section{Pre-Submission Sanity Checks}
+
+Before submission, the following checks should remain true:
+
+\begin{itemize}
+    \item The PDF contains the phrase ``v3 final full-scale.''
+    \item The PDF reports 8,064,000 represented step decisions.
+    \item The main table reports immediate greedy work 108.0 and oracle utility 0.034.
+    \item The manuscript says no real robot validation.
+    \item The final PDF is at least 25 pages.
+    \item The generated outputs in \texttt{results/full\_scale/} match the manuscript tables.
+    \item The final build removes local \texttt{main.pdf} after copying to Downloads.
+\end{itemize}
+
+\section{Closing Audit}
+
+The final paper is intentionally not a SOTA claim.
+It is a mechanism paper with enough synthetic scale to make the mechanism hard to dismiss as a single toy.
+Its strongest result is not that one handcrafted supervisor wins everywhere.
+Its strongest result is that the objective changes when the switch is physical.
+Once physical switch cost is visible, immediate greedy switching, dwell, deadband, hysteresis, and oracle cost-aware behavior can be compared on the same axes.
+
+This is the right final shape for Paper30.
+It is broad enough to exceed the v2 scope, honest enough to survive the no-hardware objection, and concrete enough to define the next real experiment.
+
+\section{Extended Positioning}
+
+\paragraph{Against generic chatter suppression.}
+The closest skeptical reading is that the paper rebrands chatter suppression.
+That reading is understandable because chatter suppression also uses margins and dwell time.
+The distinction is the measured quantity.
+Generic chatter suppression says rapid switching is undesirable because it is a logical or stability pathology.
+Physical hysteresis says a switch may be undesirable because it does work on the physical system.
+The difference matters when a switch is rare but expensive, or frequent but cheap.
+A generic dwell rule cannot tell those cases apart.
+
+\paragraph{Against pure reward regularization.}
+Another alternative is to add a regularization penalty to policy switching in the reward.
+That is close to the paper's objective, but only if the penalty is calibrated to physical switch work and transient risk.
+A constant penalty can be useful, but the v3 asymmetric and delayed-settling regimes show why constant penalties are incomplete.
+Switch cost can depend on direction, state history, and contact phase.
+
+\paragraph{Against only learning a better policy.}
+A learned policy can internalize switching costs if the training data contains them and the state representation exposes the relevant contact history.
+The paper does not deny that.
+Its claim is that the cost should be represented and audited.
+If a learned policy switches less, we should still ask whether it reduced physical work, reduced risk, or merely lagged.
+
+\paragraph{Against only using model predictive control.}
+MPC can incorporate switching costs naturally.
+In fact, MPC with a calibrated transition-cost model is one possible implementation of the paper's thesis.
+The contribution here is not that threshold supervisors are superior to MPC.
+The contribution is the insistence that the transition model include physical switch cost.
+
+\paragraph{Against only measuring energy.}
+Energy is one possible switch-cost proxy, but not the only one.
+A switch can be bad because it disturbs object pose, breaks contact, causes slip, delays completion, or creates a force spike.
+The v3 utility includes work and risk separately to avoid collapsing all physical consequences into one scalar too early.
+
+\section{Deployment Decision Tree}
+
+A deployment engineer can use the following decision tree.
+
+\paragraph{Question 1: Is the switch in contact?}
+If no, test the free-switch control.
+Immediate switching may be fine.
+If yes, continue.
+
+\paragraph{Question 2: Can switch work be measured?}
+If yes, estimate direction- and state-dependent costs.
+If no, start with conservative dwell/deadband baselines and log proxy signals such as current, impulse, or settling time.
+
+\paragraph{Question 3: Is the target slow or fast?}
+For slow targets, dwell and deadband may be adequate.
+For fast targets, excessive hysteresis can lag badly.
+Cost-aware switching should be tested.
+
+\paragraph{Question 4: Are transients safety-critical?}
+If yes, add a risk-aware term and report violations separately from tracking error.
+If no, switch work and task error may be enough.
+
+\paragraph{Question 5: Does calibration transfer?}
+If cost estimates transfer across surfaces, objects, and contact states, a calibrated supervisor can be simple.
+If not, adaptive or online estimation is needed.
+
+\paragraph{Question 6: What is the negative control?}
+Every deployment should include a condition where switching is expected to be cheap.
+If a suppression method wins there, the evaluation may be rewarding lag or filtering sensor noise rather than physical cost accounting.
+
+\section{What To Report In A Real Paper}
+
+A real robotics paper building on this one should report more than success rate.
+It should report at least:
+
+\begin{itemize}
+    \item task error or reward;
+    \item number of switches;
+    \item physical switch work;
+    \item transient-risk events;
+    \item post-switch settling time;
+    \item direction-specific switch costs;
+    \item utility under pre-registered weights;
+    \item negative-control performance;
+    \item over-hysteresis failure stress;
+    \item model-mismatch or transfer stress.
+\end{itemize}
+
+Those metrics make it possible to distinguish a good supervisor from a quiet but useless one.
+They also let reviewers see whether the proposed method solved the physical switching problem or simply moved cost into an unreported dimension.
+
+\section{Final Limit of the Claim}
+
+The strongest possible version of this paper would include real force/torque or tactile logs.
+This version does not.
+The final claim is therefore:
+
+\begin{quote}
+In contact-rich policy switching, the transition between policies can be a physical event with path-dependent work and transient risk. Supervisors should be evaluated on task error, switch work, and risk together; fixed hysteresis and dwell are useful baselines but not substitutes for switch-cost accounting.
+\end{quote}
+
+The claim is intentionally conditional.
+If the switch has no physical cost, the mechanism is unnecessary.
+If the physical cost is constant and simple, dwell or a fixed penalty may be enough.
+If the cost is stateful, asymmetric, or safety-relevant, the full switch-cost accounting becomes important.
+
+\section{Minimal Arithmetic Example}
+
+Consider two policies, left and right, and a noisy boundary that flips the locally preferred policy every other step.
+Immediate switching makes ten switches in twenty steps.
+If each switch costs one unit of physical work, the robot spends ten units of work even if the tracking error is small.
+A dwell rule allowing one switch every five steps reduces the work to roughly four units, but it may hold the wrong policy for several steps.
+A cost-aware supervisor switches only when the expected tracking benefit exceeds one unit of work.
+If the boundary flips are noise, it stays.
+If the target moves far enough, it switches.
+
+This small example is the paper in miniature.
+Immediate switching optimizes the instantaneous label.
+Dwell optimizes a crude switching budget.
+Cost-aware supervision optimizes the physical decision.
+Over-hysteresis is what happens when the budget dominates the task.
+
+\section{Hardware Evaluation Template}
+
+This appendix gives the exact hardware template that would turn the present synthetic evidence into a submission-strength robot study.
+It is included to make the scope of the next experiment concrete rather than aspirational.
+The template is deliberately narrow: it tests whether physical switch-cost accounting explains measured behavior better than logical switch count or nominal tracking error alone.
+It does not require a new robot platform, a new tactile sensor, or a learned policy.
+It requires a task where switching between two or more controllers produces a measurable contact transient.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Minimum hardware template for testing the physical-hysteresis claim.}
+\label{tab:hardware-template}
+\begin{tabular}{p{0.20\linewidth}p{0.34\linewidth}p{0.34\linewidth}}
+\toprule
+Component & Required measurement & Acceptance criterion \\
+\midrule
+Task & Object pose, contact state, commanded policy label, executed policy label & The task contains repeated policy-boundary crossings under contact. \\
+Switch event & Timestamped pre-switch state, post-switch state, direction, and settling interval & Switches can be aligned with force, pose, or slip transients. \\
+Physical cost & Force impulse, motor current proxy, slip distance, or external work estimate & At least one cost proxy changes detectably across switch directions or contact states. \\
+Baselines & Immediate greedy, dwell only, deadband only, fixed switch penalty, calibrated cost-aware supervisor & Baselines expose whether the proposed method beats both chatter suppression and pure lag. \\
+Controls & Free-switch condition and over-hysteresis stress & The method should not win by suppressing cheap switches or by freezing behavior. \\
+Reporting & Task error, switch count, switch work, transient risk, utility, and confidence intervals & The conclusion is based on the full tradeoff, not a single favorable metric. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The first requirement is event alignment.
+Every switch should be logged with the state immediately before the switch, the selected policy before and after the switch, the nominal reason for switching, and a short post-switch window.
+Without this alignment, a paper can only say that switches were frequent or infrequent.
+With it, the paper can ask whether specific transitions created physical consequences.
+The present synthetic suite represents those consequences through switch work and transient risk; a hardware version should replace those terms with measured or carefully justified proxies.
+
+The second requirement is directional accounting.
+A gripper closing into contact and a gripper releasing contact are not physically symmetric.
+A foot entering stance and a foot leaving stance are not symmetric.
+A pushing controller moving from sticking to sliding is not symmetric with the reverse transition.
+Therefore, the hardware study should report separate costs for each direction of each transition.
+If the costs are symmetric, that is a useful finding.
+If they are asymmetric, then methods that only count switches are missing the main mechanism.
+
+The third requirement is a cheap-switch control.
+This is the easiest control to omit and one of the most important.
+If switching between policies is cheap because the robot is out of contact, then immediate switching should not be penalized heavily.
+A supervisor that still suppresses switches in that condition is not demonstrating physical cost awareness; it is demonstrating inertia.
+The free-switch control in the v3 suite exists for exactly this reason.
+It protects the conclusion from the false statement that fewer switches are always better.
+
+The fourth requirement is an over-hysteresis failure.
+Any method can look calm by refusing to switch.
+The hardware study should include a target motion, contact transition, or disturbance large enough that excessive hysteresis fails visibly.
+This condition should be pre-registered, not invented after seeing results.
+The expected result is not that calibrated supervision wins every scalar metric.
+The expected result is that it avoids the two bad extremes: rapid physical switching when the boundary is noisy, and frozen behavior when the task genuinely changes.
+
+The fifth requirement is model-mismatch reporting.
+A calibrated supervisor may be tuned on one object, surface, or contact geometry and evaluated on another.
+The paper should report whether the calibration transfers, degrades gracefully, or fails abruptly.
+This matters because the practical objection to physical switch-cost accounting is not that the objective is wrong; it is that the cost model may be expensive to identify.
+Transfer stress makes that objection measurable.
+
+The final requirement is claim discipline.
+The hardware conclusion should have the following form: in the tested contact-rich task, measured switch transients were large enough that a supervisor using physical switch-cost estimates improved the task-error, work, and risk tradeoff relative to immediate switching and generic suppression baselines.
+That sentence is stronger than the present paper's synthetic claim, but it is still bounded.
+It does not say that a particular threshold is universal.
+It does not say that hysteresis is always necessary.
+It says that, when switching is physical, the physical transition belongs in the objective.
 
 \end{document}

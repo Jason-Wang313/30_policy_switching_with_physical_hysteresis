@@ -1,0 +1,31 @@
+{
+  "paper": 30,
+  "version": "v3 final full-scale",
+  "runner": "scripts/run_full_scale_hysteresis_suite.py",
+  "families": 7,
+  "regimes": 10,
+  "methods": 12,
+  "seeds": 40,
+  "steps_per_seed": 240,
+  "represented_step_decisions": 8064000,
+  "canonical_pdf": "C:/Users/wangz/Downloads/30.pdf",
+  "canonical_pdf_pages": 25,
+  "canonical_pdf_bytes": 550057,
+  "canonical_pdf_sha256": "6B8D9A0050D0FCF81907884652B2D305ED6F62021C83FFF49BD0CE919459DD00",
+  "local_main_pdf_present_after_final_build": false,
+  "key_results": {
+    "immediate_mean_switch_work": 108.03882639494633,
+    "calibrated_mean_switch_work": 16.19067503543564,
+    "immediate_mean_error": 0.015050343170133746,
+    "calibrated_mean_error": 0.06705312225241729,
+    "over_hysteresis_mean_error": 0.5810797971472927,
+    "oracle_mean_utility": 0.03447937406786234
+  },
+  "verified_pdf_text_markers": [
+    "v3 final full-scale",
+    "8,064,000",
+    "physical hysteresis",
+    "108.0",
+    "oracle cost-aware"
+  ]
+}

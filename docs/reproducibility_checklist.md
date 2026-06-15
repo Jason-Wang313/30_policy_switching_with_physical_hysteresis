@@ -1,17 +1,25 @@
 # Reproducibility Checklist
 
-- [x] Main simulator is `scripts/run_switch_hysteresis_sim.py`.
+- [x] Full-scale runner is `scripts/run_full_scale_hysteresis_suite.py`.
 - [x] Build script is `scripts/build_pdf.ps1`.
-- [x] Main figure is `figures/switch_hysteresis_sim.png`.
-- [x] V2 outputs are `results/supervisor_stress.csv` and `results/supervisor_stress_table.tex`.
 - [x] Paper source is `main.tex`.
+- [x] Full-scale CSV outputs are in `results/full_scale/seed_metrics.csv` and `results/full_scale/aggregate_metrics.csv`.
+- [x] Full-scale summary is `results/full_scale/experiment_summary.json`.
+- [x] Generated manuscript tables are in `results/full_scale/*.tex`.
+- [x] Generated v3 figures are in `figures/full_scale/`.
+- [x] Legacy figure is `figures/switch_hysteresis_sim.png`.
 - [x] Canonical PDF path is `C:/Users/wangz/Downloads/30.pdf`.
+- [x] Canonical PDF is 25 pages and 550057 bytes.
+- [x] Canonical PDF SHA256 is `6B8D9A0050D0FCF81907884652B2D305ED6F62021C83FFF49BD0CE919459DD00`.
 - [x] Local `main.pdf` is removed after canonical copy.
-- [x] Visible Desktop PDF copies are absent.
+- [x] `build_pdflatex2.log` has no overfull boxes, unresolved references, undefined citations, fatal errors, or TeX `!` errors.
 
 Recommended verification commands:
 
 ```powershell
-python scripts\run_switch_hysteresis_sim.py
+python scripts\run_full_scale_hysteresis_suite.py
 powershell -ExecutionPolicy Bypass -File scripts\build_pdf.ps1
+pdfinfo C:\Users\wangz\Downloads\30.pdf
+Get-FileHash -Algorithm SHA256 C:\Users\wangz\Downloads\30.pdf
+Test-Path main.pdf
 ```

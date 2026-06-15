@@ -1,0 +1,54 @@
+{
+  "version": "v3 final full-scale",
+  "families": [
+    "boundary_tracking",
+    "stick_slip",
+    "recontact_settling",
+    "foothold_phase",
+    "force_position_contact",
+    "pushing_surface",
+    "smooth_free_control"
+  ],
+  "regimes": [
+    "low_noise_low_cost",
+    "high_noise_low_cost",
+    "low_noise_high_cost",
+    "high_noise_high_cost",
+    "asymmetric_cost",
+    "delayed_settling",
+    "drifting_boundary",
+    "model_mismatch",
+    "free_switch_control",
+    "over_hysteresis_trap"
+  ],
+  "methods": [
+    "immediate_greedy",
+    "dwell_only",
+    "deadband_only",
+    "hysteresis_dwell",
+    "over_hysteresis",
+    "switch_penalty_greedy",
+    "adaptive_hysteresis",
+    "calibrated_cost_supervisor",
+    "risk_aware_supervisor",
+    "oracle_cost_supervisor",
+    "sticky_policy",
+    "randomized_debounce"
+  ],
+  "seeds": 40,
+  "steps_per_seed": 240,
+  "step_decisions": 8064000,
+  "aggregate_rows": 840,
+  "seed_rows": 33600,
+  "key_results": {
+    "immediate_mean_switch_work": 108.03882639494633,
+    "hysteresis_dwell_mean_switch_work": 17.207780643837015,
+    "calibrated_mean_switch_work": 16.19067503543564,
+    "immediate_mean_error": 0.015050343170133746,
+    "hysteresis_dwell_mean_error": 0.11075737575532106,
+    "calibrated_mean_error": 0.06705312225241729,
+    "over_hysteresis_mean_error": 0.5810797971472927,
+    "oracle_mean_utility": 0.03447937406786234,
+    "calibrated_mean_utility": 0.07300857726493007
+  }
+}
