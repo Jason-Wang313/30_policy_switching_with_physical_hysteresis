@@ -1,23 +1,26 @@
 # Policy Switching With Physical Hysteresis
 
-Recovered paper package for robotics batch paper 30.
+Recovered and v3 submission-hardened package for robotics batch paper 30.
 
 The project contains a Crossref-derived literature sweep, novelty/audit notes,
-a small hysteresis-switching simulation, and an anonymous ICLR-style paper.
+the original toy hysteresis-switching simulation, a RAM-light full-scale
+synthetic experiment suite, and a 25-page anonymous ICLR-style manuscript.
 
 ## Hardening Status
 
-This is the v2 submission-hardened version. The added supervisor stress shows
-the tradeoff: hysteresis+dwell reduces mean switch cost from 171.0 to 29.5
-across 50 seeds, but mean tracking error rises from 0.090 to 0.186; an
-over-hysteresis setting reduces switch cost to 11.4 but raises mean error to
-0.439.
+This is the v3 final full-scale version. The new suite covers 7 dynamics
+families, 10 regimes, 12 supervisors, 40 seeds, and 8,064,000 represented step
+decisions. Immediate greedy switching keeps low mean tracking error (0.015) but
+accumulates high mean switch work (108.0) and transient risk (32.81). The
+calibrated cost supervisor cuts mean switch work to 16.2 with mean error 0.067;
+the oracle cost-aware supervisor gives the best utility, 0.034.
 
 Build from the project root:
 
 ```powershell
-python scripts\run_switch_hysteresis_sim.py
+python scripts\run_full_scale_hysteresis_suite.py
 powershell -ExecutionPolicy Bypass -File scripts\build_pdf.ps1
 ```
 
-The batch output PDF is copied to `C:/Users/wangz/Downloads/30.pdf`.
+The canonical final PDF is `C:/Users/wangz/Downloads/30.pdf`.
+The final build removes the transient local `main.pdf`.

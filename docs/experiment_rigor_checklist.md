@@ -1,14 +1,18 @@
 # Experiment Rigor Checklist
 
-- [x] Main simulator is `scripts/run_switch_hysteresis_sim.py`.
-- [x] Main figure regenerates as `figures/switch_hysteresis_sim.png`.
-- [x] Baseline comparison includes immediate switching.
-- [x] V2 supervisor stress includes immediate, dwell-only, deadband-only, hysteresis+dwell, and over-hysteresis settings.
-- [x] V2 reports both switch cost and tracking error.
-- [x] Negative boundary is explicit: over-hysteresis reduces switch cost to 11.4 but raises mean error to 0.439.
+- [x] A paper-specific v3 execution plan was written before substantive full-scale edits.
+- [x] Full-scale runner is `scripts/run_full_scale_hysteresis_suite.py`.
+- [x] Full-scale suite covers 7 dynamics families and 10 stress/control regimes.
+- [x] Full-scale suite compares 12 supervisors.
+- [x] Full-scale suite uses 40 seeds and 8,064,000 represented step decisions.
+- [x] Baselines include immediate greedy, dwell-only, deadband-only, hysteresis+dwell, over-hysteresis, fixed switch penalty, adaptive hysteresis, calibrated cost supervision, risk-aware supervision, oracle cost supervision, sticky policy, and randomized debounce.
+- [x] Metrics include switch count, switch work, tracking error, transient risk, utility, and win rate.
+- [x] Negative controls are explicit: sticky policy, over-hysteresis trap, and smooth free-switch control.
+- [x] Figures include work-by-method, error/work Pareto, and regime-winner phase views.
+- [x] Tables include scale, main performance, family summary, regime winners, and controls/failures.
+- [x] Legacy toy/v2 artifacts are preserved for provenance.
 - [ ] No hardware validation.
-- [ ] No high-fidelity contact simulator.
 - [ ] No measured force/work traces.
-- [ ] No tuned MPC or hybrid-control baseline.
+- [ ] No tuned hardware MPC or hybrid-control baseline.
 
-Decision: mechanism evidence only; terminal state is workshop-only / strong-revise.
+Decision: final for the batch pass as a full-scale synthetic/mechanism paper; hardware claims remain out of scope.

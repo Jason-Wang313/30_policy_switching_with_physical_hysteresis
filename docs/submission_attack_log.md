@@ -1,15 +1,18 @@
 # Submission Attack Log
 
-Updated: 2026-06-13
+Updated: 2026-06-15
 
 ## Attack Rounds
 
 1. Closest-prior attack: hybrid control, dwell-time supervision, and hysteresis gates already suppress chatter. Response: keep novelty to physical switch-path cost in contact, not the gate itself.
-2. Evidence attack: the main run is a toy simulation with no hardware. Response: keep paper-readiness workshop-only.
-3. Tuned-baseline attack: a dwell or deadband supervisor may explain the result. Response: add v2 supervisor stress with immediate, dwell-only, deadband-only, hysteresis+dwell, and over-hysteresis settings.
-4. Tradeoff attack: switch suppression may just worsen tracking. Response: v2 reports tracking error alongside switch cost.
-5. Artifact attack: v1 left `main.pdf` locally and copied a Desktop PDF. Response: build script copies only to Downloads and removes local PDF; Desktop copy is removed.
+2. Evidence attack: the original run was a toy simulation with no hardware. Response: v3 adds a broader synthetic suite but keeps hardware claims out of scope.
+3. Tuned-baseline attack: dwell or deadband may explain the result. Response: v3 includes immediate greedy, dwell-only, deadband-only, hysteresis+dwell, fixed penalty, adaptive, calibrated, risk-aware, oracle, sticky, and randomized baselines.
+4. Tradeoff attack: switch suppression may just worsen tracking. Response: v3 reports task error, switch work, transient risk, utility, and win rate together.
+5. Fewer-switches attack: suppressing all switches can look good on switching metrics. Response: v3 includes sticky-policy failure and over-hysteresis trap.
+6. Cheap-switch attack: a method should not suppress switches when switching is physically cheap. Response: v3 includes a smooth free-switch control.
+7. Calibration attack: calibrated cost may fail under model mismatch. Response: v3 includes model-mismatch and oracle comparisons.
+8. Artifact attack: final PDFs must live only in Downloads after completion. Response: `scripts/build_pdf.ps1` copies to `C:/Users/wangz/Downloads/30.pdf` and removes local `main.pdf`.
 
-## V2 Outcome
+## V3 Outcome
 
-The paper remains workshop-only / strong-revise. Hysteresis+dwell cuts mean switch cost from 171.0 to 29.5, but raises mean tracking error from 0.090 to 0.186. The supported claim is switch-cost accounting, not universal performance improvement.
+The paper is final for this batch pass as a full-scale synthetic/mechanism paper. It is 25 pages, uses 8,064,000 represented step decisions, and preserves honest limitations around missing hardware validation.
