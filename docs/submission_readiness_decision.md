@@ -10,6 +10,7 @@ Decision: final for this batch pass as a v3 full-scale synthetic/mechanism paper
 - The manuscript reports the key tradeoff directly: immediate greedy switching has low error but high switch work; calibrated and oracle cost-aware supervisors reduce physical switch work and utility cost; over-hysteresis fails.
 - The paper includes controls for cheap switching, over-hysteresis, model mismatch, asymmetric cost, delayed settling, and drifting boundaries.
 - The final PDF exists only as the canonical Downloads artifact.
+- The delivered PDF was rendered and visually inspected, including VLA-style red internal link boxes on page 4.
 
 ## Remaining Non-Claims
 

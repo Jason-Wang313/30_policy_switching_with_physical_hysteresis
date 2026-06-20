@@ -22,13 +22,14 @@
 
 11. Paper-readiness judgment: v3 is final for this batch pass as a full-scale synthetic/mechanism paper. It is not a hardware-validated main-track robotics claim.
 
-12. Exact Downloads PDF path: `C:/Users/wangz/Downloads/30.pdf` (exists, size=550057 bytes, 25 pages, SHA256 `6B8D9A0050D0FCF81907884652B2D305ED6F62021C83FFF49BD0CE919459DD00`). Build status: `complete`; copied flag: `True`.
+12. Exact Downloads PDF path: `C:/Users/wangz/Downloads/30.pdf` (exists, size=599452 bytes, 25 pages, SHA256 `7E5EE91CFFDF20D624023BABEA90FE68BB500C32C2BD6846118A7EABCD57DEB0`). Build status: `complete`; copied flag: `True`.
 
 13. GitHub URL: `https://github.com/Jason-Wang313/30_policy_switching_with_physical_hysteresis`.
 
 14. Local repo PDF copy: absent after the final build script removed transient `main.pdf`.
 
 15. PDF text markers verified: `v3 final full-scale`, `8,064,000`, `physical hysteresis`, `108.0`, and `oracle cost-aware`.
+16. VLA-style visual check: link page 4 was rendered with `pdftoppm` and inspected; one-point red internal reference boxes are crisp, aligned, and no cyan boxes appear.
 
 Additional audit notes:
 - The build used `scripts/build_pdf.ps1` and removed transient `main.pdf`.

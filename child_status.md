@@ -12,8 +12,9 @@ Current facts:
 - Main v3 result: immediate greedy switching has mean switch work 108.0 and mean error 0.015; calibrated cost supervision has mean switch work 16.2 and mean error 0.067; oracle cost-aware supervision has best mean utility 0.034.
 - Negative controls remain explicit: sticky policy fails on task error, over-hysteresis traps reduce switch work but raise mean error to 0.581, and the smooth free-switch control checks that cheap switches should not be suppressed.
 - Paper source is `main.tex` with visible `v3 final full-scale` marker and 25 rendered pages.
-- Canonical final PDF is `C:/Users/wangz/Downloads/30.pdf` with SHA256 `6B8D9A0050D0FCF81907884652B2D305ED6F62021C83FFF49BD0CE919459DD00`.
-- Final PDF size is 550057 bytes.
+- Canonical final PDF is `C:/Users/wangz/Downloads/30.pdf` with SHA256 `7E5EE91CFFDF20D624023BABEA90FE68BB500C32C2BD6846118A7EABCD57DEB0`.
+- Final PDF size is 599452 bytes.
+- Latest visual hardening: VLA-style one-point red internal link boxes verified on page 4; green cite/url border policy configured, with no cite/url annotations present in this manuscript.
 - Transient `main.pdf` was removed by `scripts/build_pdf.ps1`.
 - Public GitHub repo exists: `https://github.com/Jason-Wang313/30_policy_switching_with_physical_hysteresis`.
 

@@ -10,9 +10,20 @@
   "represented_step_decisions": 8064000,
   "canonical_pdf": "C:/Users/wangz/Downloads/30.pdf",
   "canonical_pdf_pages": 25,
-  "canonical_pdf_bytes": 550057,
-  "canonical_pdf_sha256": "6B8D9A0050D0FCF81907884652B2D305ED6F62021C83FFF49BD0CE919459DD00",
+  "canonical_pdf_bytes": 599452,
+  "canonical_pdf_sha256": "7E5EE91CFFDF20D624023BABEA90FE68BB500C32C2BD6846118A7EABCD57DEB0",
   "local_main_pdf_present_after_final_build": false,
+  "vla_link_box_visual_hardening": {
+    "verified": true,
+    "link_pages": [[4, 2]],
+    "colors": {
+      "red": 2,
+      "green": 0,
+      "cyan": 0
+    },
+    "border": [0, 0, 1],
+    "note": "The manuscript has internal reference links only; green cite/url boxes are configured by hyperref policy but no cite/url link annotations are present."
+  },
   "key_results": {
     "immediate_mean_switch_work": 108.03882639494633,
     "calibrated_mean_switch_work": 16.19067503543564,
