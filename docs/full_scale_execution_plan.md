@@ -197,3 +197,7 @@ After final export:
 - Docs match final results and final PDF hash.
 - Git commit is pushed.
 - Worktree is clean and local `HEAD` equals upstream before moving to Paper31.
+On 2026-06-20, the final PDF was rebuilt with the VLA role-model hyperref box
+policy. The rebuilt artifact has SHA256
+`7E5EE91CFFDF20D624023BABEA90FE68BB500C32C2BD6846118A7EABCD57DEB0` and
+VLA-style one-point red internal link boxes on page 4.

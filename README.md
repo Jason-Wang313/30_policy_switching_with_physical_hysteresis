@@ -24,3 +24,4 @@ powershell -ExecutionPolicy Bypass -File scripts\build_pdf.ps1
 
 The canonical final PDF is `C:/Users/wangz/Downloads/30.pdf`.
 The final build removes the transient local `main.pdf`.
+VLA-style visual hardening is applied: one-point red internal link boxes are verified on page 4, with no cyan boxes. The manuscript has no cite/url link annotations, so green cite/url boxes are configured but not artificially introduced.
